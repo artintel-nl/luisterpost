@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 64" width="360" height="64" role="img" aria-label="Luisterpost">
+  <g fill="none" stroke="#1a1c17" stroke-width="4.5" stroke-linecap="round">
+    <path d="M32 56 V 21"></path>
+    <path d="M19 56 H 45"></path>
+  </g>
+  <g fill="none" stroke="#d9963f" stroke-width="4.5" stroke-linecap="round">
+    <path d="M21 25 A 15 15 0 0 0 21 45"></path>
+    <path d="M43 25 A 15 15 0 0 1 43 45"></path>
+  </g>
+  <circle cx="32" cy="14" r="5.5" fill="#1a1c17"></circle>
+  <text x="80" y="41" font-family="Archivo, Helvetica, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="4.4" fill="#1a1c17">LUISTERPOST</text>
+</svg>

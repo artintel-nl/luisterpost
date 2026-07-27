@@ -1,0 +1,11 @@
+# internal planning docs — never publish
+PUBLISHING-PLAN.md
+.resume_task.md
+.claude/
+
+# os / editor noise
+.DS_Store
+__pycache__/
+*.pyc
+# keep the raw handoff private; brand/ is the public copy
+design_handoff_luisterpost_logo/

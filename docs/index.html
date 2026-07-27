@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luisterpost — a listening post in a Utrecht city garden</title>
+<meta name="description" content="One house in Utrecht listening to its environment across four physical media: sound, radio, light and gamma radiation. Birdsong, aircraft, lightning, drones and background radiation — open code and open data.">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1c17;
+  --ink-inverse:#ece8dd;
+  --signal:#d9963f;
+  --tile:#171a14;
+  --paper:#f4f1e8;
+  --paper-sunk:#e9e5d9;
+  --rule:#d3cebe;
+  --rule-dark:#2b3026;
+  --muted:#6d6a5c;
+  --muted-dark:#8d9483;
+  --link:#8a5a1e;
+  --link-hover:#d9963f;
+  --oxide:#c2543a;
+  --olive:#7fa651;
+  --slate:#5b8fb0;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{
+  font-family:"Archivo",system-ui,sans-serif;
+  background:var(--paper-sunk);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.55;
+  text-wrap:pretty;
+}
+a{color:var(--link);transition:color 200ms ease}
+a:hover{color:var(--link-hover)}
+a:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.mono{font-family:"JetBrains Mono",monospace}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+/* ---------- header (per dashboard-header spec, dark tile) ---------- */
+header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
+.hdr{display:flex;align-items:center;gap:14px;padding:16px 24px;max-width:960px;margin:0 auto}
+.hdr img{width:30px;height:30px;display:block}
+.hdr .wordmark{font-weight:700;font-size:15px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-inverse);text-decoration:none}
+.hdr nav{margin-left:40px;display:flex;gap:20px}
+.hdr nav a{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-dark);text-decoration:none}
+.hdr nav a:hover{color:var(--ink-inverse)}
+.hdr .live{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--signal)}
+.hdr .live i{width:7px;height:7px;border-radius:50%;background:var(--signal)}
+@media (max-width:700px){.hdr nav{display:none}}
+
+/* ---------- hero ---------- */
+.hero{padding:72px 0 56px}
+.hero-row{display:flex;align-items:flex-start;gap:34px;flex-wrap:wrap}
+.hero-mark{width:120px;height:120px;flex:none}
+.hero-mark .arc{animation:intake 1.2s ease-in-out infinite alternate}
+.hero-mark .arc-r{animation-delay:150ms}
+@keyframes intake{from{opacity:.35}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){.hero-mark .arc{animation:none;opacity:1}}
+.hero h1{font-weight:700;font-size:clamp(34px,6vw,56px);letter-spacing:-.015em;line-height:1.05}
+.hero .def{margin-top:12px;color:var(--muted);font-size:14px}
+.hero .thesis{margin-top:14px;font-size:clamp(17px,2.2vw,20px);line-height:1.5;max-width:32em}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:block}
+
+/* ---------- band chart ---------- */
+.chart{border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.chart-head{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule);font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.bands{display:grid;grid-template-columns:repeat(4,1fr)}
+.band{padding:18px 14px 22px;border-right:1px solid var(--rule);text-decoration:none;color:var(--ink)}
+.band:last-child{border-right:none}
+.band:hover{background:var(--paper-sunk)}
+.band .tick{display:block;height:5px;margin-bottom:14px}
+.t-sound{background:var(--slate)}
+.t-radio{background:var(--oxide)}
+.t-light{background:repeating-linear-gradient(90deg,var(--olive) 0 10px,transparent 10px 16px)}
+.t-gamma{background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 8px)}
+.band h2{font-size:16px;font-weight:600}
+.band .nl{font-size:12.5px;color:var(--muted);font-style:italic}
+.band .range{margin-top:8px;font-size:11px;letter-spacing:.14em;color:var(--muted)}
+.band p.what{margin-top:6px;font-size:13px;line-height:1.5}
+.chart-note{font-size:12.5px;color:var(--muted);margin-bottom:64px}
+
+/* ---------- prose ---------- */
+.prose{max-width:37em;margin-bottom:72px}
+.prose p{font-size:15px}
+.prose p+p{margin-top:1em}
+
+/* ---------- channel log ---------- */
+.log{margin-bottom:72px}
+.log-title{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--ink);padding-bottom:8px}
+.log-title h2{font-size:17px;font-weight:600}
+.log-title span{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.channel{display:grid;grid-template-columns:56px 1fr 168px 96px;gap:14px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--rule)}
+.channel .ch{font-size:11px;letter-spacing:.14em;color:var(--muted)}
+.channel h3{font-size:15px;font-weight:600}
+.channel .desc{font-size:13px;color:var(--muted);line-height:1.5;margin-top:2px}
+.channel .medium{font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.md-sound{color:var(--slate)}
+.md-radio{color:var(--oxide)}
+.md-light{color:var(--olive)}
+.md-gamma{color:var(--ink)}
+.md-mixed{color:var(--muted)}
+.status{font-size:11px;letter-spacing:.14em;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:7px}
+.s-live{color:var(--ink)}
+.s-live i{width:7px;height:7px;border-radius:50%;background:var(--signal);flex:none}
+.s-plan{color:var(--muted)}
+.s-plan i{width:7px;height:7px;border-radius:50%;border:1px solid var(--muted);flex:none}
+@media (max-width:760px){
+  .bands{grid-template-columns:1fr 1fr}
+  .band{border-bottom:1px solid var(--rule)}
+  .channel{grid-template-columns:56px 1fr;grid-template-rows:auto auto auto}
+  .channel .medium,.status{grid-column:2;justify-content:flex-start;text-align:left}
+}
+
+/* ---------- repo card ---------- */
+.repo{border:1px solid var(--rule);background:var(--paper);padding:26px;margin-bottom:72px}
+.repo h2{font-size:17px;font-weight:600;margin-bottom:10px}
+.repo p{max-width:37em;font-size:14px}
+.repo .cta{display:inline-block;margin-top:18px;font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;background:var(--tile);color:var(--ink-inverse);text-decoration:none;padding:12px 18px}
+.repo .cta:hover{color:var(--signal)}
+
+/* ---------- footer ---------- */
+footer{background:var(--tile);color:var(--muted-dark);padding:26px 0 44px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+footer a{color:var(--signal);text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <img src="assets/mark-on-dark.svg" alt="" width="30" height="30">
+    <a class="wordmark" href="/">Luisterpost</a>
+    <nav aria-label="Channels">
+      <a href="#ch01">Birds</a>
+      <a href="#ch04">ADS-B</a>
+      <a href="#ch05">Remote-ID</a>
+      <a href="#ch08">Radiacode</a>
+    </nav>
+    <span class="live mono"><i aria-hidden="true"></i>7 RECEIVERS UP</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <div class="hero-row">
+      <svg class="hero-mark" viewBox="0 0 64 64" role="img" aria-label="The Luisterpost mark: a mast with two intake arcs">
+        <g fill="none" stroke="#1a1c17" stroke-width="4.5" stroke-linecap="round">
+          <path d="M32 56 V 21"></path>
+          <path d="M19 56 H 45"></path>
+        </g>
+        <g fill="none" stroke="#d9963f" stroke-width="4.5" stroke-linecap="round">
+          <path class="arc" d="M21 25 A 15 15 0 0 0 21 45"></path>
+          <path class="arc arc-r" d="M43 25 A 15 15 0 0 1 43 45"></path>
+        </g>
+        <circle cx="32" cy="14" r="5.5" fill="#1a1c17"></circle>
+      </svg>
+      <div>
+        <span class="eyebrow">Station Utrecht NL · 52.09°N 5.12°E · continuous watch</span>
+        <h1>A listening post in a city garden</h1>
+        <p class="def"><em>luis·ter·post</em> (de) — a post from which one listens; a signals intercept station.</p>
+        <p class="thesis">One house near the centre of Utrecht, listening to everything that passes over it — from birdsong to gamma rays.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="chart" aria-label="The four bands the station receives on">
+    <div class="chart-head"><span>Receiving bands</span><span>4 media · 11 channels</span></div>
+    <div class="bands">
+      <a class="band" href="#ch01">
+        <span class="tick t-sound" aria-hidden="true"></span>
+        <h2>Sound</h2><span class="nl">geluid</span>
+        <p class="range mono">20 HZ – 120 KHZ</p>
+        <p class="what">Pressure waves: the dawn chorus, and above human hearing, the bats.</p>
+      </a>
+      <a class="band" href="#ch04">
+        <span class="tick t-radio" aria-hidden="true"></span>
+        <h2>Radio</h2><span class="nl">radio</span>
+        <p class="range mono">500 KHZ – 2.4 GHZ</p>
+        <p class="what">Lightning sferics, ship and aircraft transponders, drone beacons.</p>
+      </a>
+      <a class="band" href="#ch09">
+        <span class="tick t-light" aria-hidden="true"></span>
+        <h2>Light</h2><span class="nl">licht</span>
+        <p class="range mono">905 NM</p>
+        <p class="what">Near-infrared laser backscatter off dust and pollen. Planned.</p>
+      </a>
+      <a class="band" href="#ch08">
+        <span class="tick t-gamma" aria-hidden="true"></span>
+        <h2>Gamma</h2><span class="nl">gamma</span>
+        <p class="range mono">0.05 – 3 MEV</p>
+        <p class="what">Ionizing radiation: cosmic rays, radon washout, the background itself.</p>
+      </a>
+    </div>
+  </section>
+  <p class="chart-note">The station receives on four physical media. Every instrument below is a channel on one of these bands.</p>
+
+  <section class="prose">
+    <p>A luisterpost is what the Dutch military called a signals intercept station — a room full of receivers, pointed at whatever was passing through the air. This one is not on a border or a hilltop. It is an ordinary house in Utrecht, fitted over the years with microphones, antennas, particle detectors and weather instruments, all reporting into one small MQTT broker in the meter cupboard.</p>
+    <p>Listened to together, the channels describe a city's days better than any one of them could: the blackbird starts before the first plane; lightning arrives on the radio band minutes before the rain arrives on the roof; a Saharan dust plume shows up in the particle counts and, faintly, in the gamma background. This site and its repository publish the code, the hardware notes and — step by step — the data.</p>
+  </section>
+
+  <section class="log" aria-label="Channel log">
+    <div class="log-title"><h2>Channel log</h2><span>medium / status</span></div>
+
+    <div class="channel" id="ch01">
+      <span class="ch mono">CH 01</span>
+      <div><h3>Birds</h3><p class="desc">BirdNET acoustic species detection — an EM272 microphone in a DIY weatherproof housing, classified on a Raspberry Pi 4.</p></div>
+      <span class="medium mono md-sound">Sound 2–10 kHz</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch02">
+      <span class="ch mono">CH 02</span>
+      <div><h3>Weather</h3><p class="desc">Greenhouse-mounted station: temperature, humidity, pressure, wind, rain — and an AS3935 lightning detector listening for sferics.</p></div>
+      <span class="medium mono md-mixed">Mixed · RF 500 kHz</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch03">
+      <span class="ch mono">CH 03</span>
+      <div><h3>Air quality</h3><p class="desc">CO₂, PM2.5, temperature and humidity, logged continuously — over 170 days of data and counting.</p></div>
+      <span class="medium mono md-mixed">Particle count</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch04">
+      <span class="ch mono">CH 04</span>
+      <div><h3>Aircraft — ADS-B</h3><p class="desc">Transponder decoding at 1090 MHz with a from-scratch decoder, plus an enrichment pipeline for routes and aircraft types.</p></div>
+      <span class="medium mono md-radio">Radio 1090 MHz</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch05">
+      <span class="ch mono">CH 05</span>
+      <div><h3>Drones — Remote-ID</h3><p class="desc">EU/ASTM Remote ID receiver on two ESP32-S3 boards — WiFi and Bluetooth beacons from drones overhead. Published as aggregate counts only.</p></div>
+      <span class="medium mono md-radio">Radio 2.4 GHz</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch06">
+      <span class="ch mono">CH 06</span>
+      <div><h3>Power</h3><p class="desc">Station telemetry: a two-channel INA219 DC power node keeping the books on what the instruments themselves consume.</p></div>
+      <span class="medium mono md-mixed">Telemetry</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch08">
+      <span class="ch mono">CH 08</span>
+      <div><h3>Radiation — Radiacode</h3><p class="desc">Gamma background monitor — a Radiacode 110 scintillation detector on an ESP32-P4 bridge, logging dose rate and daily energy spectra.</p></div>
+      <span class="medium mono md-gamma">Gamma 0.05–3 MeV</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch07">
+      <span class="ch mono">CH 07</span>
+      <div><h3>Bats</h3><p class="desc">Ultrasonic detection of the evening shift: species and activity from echolocation calls above the garden.</p></div>
+      <span class="medium mono md-sound">Sound 20–120 kHz</span>
+      <span class="status mono s-plan"><i aria-hidden="true"></i>PLANNED</span>
+    </div>
+
+    <div class="channel" id="ch09">
+      <span class="ch mono">CH 09</span>
+      <div><h3>Aerosol lidar</h3><p class="desc">A passive 905 nm experiment: listening to laser backscatter to profile dust and pollen above the garden.</p></div>
+      <span class="medium mono md-light">Light 905 nm</span>
+      <span class="status mono s-plan"><i aria-hidden="true"></i>PLANNED</span>
+    </div>
+
+    <div class="channel" id="ch10">
+      <span class="ch mono">CH 10</span>
+      <div><h3>Ships — AIS</h3><p class="desc">Marine transponders at 162 MHz — barge traffic on the Amsterdam-Rijnkanaal, a few kilometres east.</p></div>
+      <span class="medium mono md-radio">Radio 162 MHz</span>
+      <span class="status mono s-plan"><i aria-hidden="true"></i>PLANNED</span>
+    </div>
+
+    <div class="channel" id="ch11">
+      <span class="ch mono">CH 11</span>
+      <div><h3>Pollen</h3><p class="desc">Counting what the air carries in spring: a DIY optical pollen counter, still on the drawing board.</p></div>
+      <span class="medium mono md-light">Particle count</span>
+      <span class="status mono s-plan"><i aria-hidden="true"></i>PLANNED</span>
+    </div>
+  </section>
+
+  <section class="repo">
+    <h2>Open station</h2>
+    <p>Every channel is being published — firmware, hardware notes, housing builds and data formats. The repository fills up one instrument at a time; data releases follow. Code is MIT, data is CC&nbsp;BY&nbsp;4.0, and the station location is published at city precision.</p>
+    <a class="cta" href="https://github.com/artintel-nl/luisterpost">github.com/artintel-nl/luisterpost →</a>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Luisterpost · Utrecht NL</span>
+    <span>Code MIT · Data CC BY 4.0 · <a href="https://github.com/artintel-nl/luisterpost">GitHub</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
