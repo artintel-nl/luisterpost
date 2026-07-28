@@ -149,7 +149,7 @@ footer a{color:var(--signal);text-decoration:none}
     <nav aria-label="Live channels">
       <a href="/aircraft/">Planes</a>
     </nav>
-    <span class="live mono is-idle" id="rx"><i aria-hidden="true"></i><span id="rx-txt">7 RECEIVERS</span></span>
+    <span class="live mono is-idle" id="rx"><i aria-hidden="true"></i><span id="rx-txt">LISTENING</span></span>
   </div>
 </header>
 
@@ -246,8 +246,10 @@ footer a{color:var(--signal);text-decoration:none}
         crossorigin="anonymous" defer></script>
 <script>
 // The header used to hard-code "7 RECEIVERS UP", which was a claim the page could not
-// back up. It now reports what the station actually says. Until the feed answers it
-// states the count only, and makes no claim about anything being up.
+// back up — and which silently went stale the moment an instrument was added or
+// removed. It now reports what the station actually says. The served fallback is
+// "LISTENING": no number, so there is nothing that can drift out of date if the feed
+// is unreachable.
 window.addEventListener("load", function () {
   if (typeof mqtt === "undefined") return;          // CDN blocked: keep the static text
   var el = document.getElementById("rx");
