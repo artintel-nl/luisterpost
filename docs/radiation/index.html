@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radiation — Radiacode RC110 — Luisterpost</title>
+<meta name="description" content="Live gamma background at the Luisterpost listening post in Utrecht: dose rate and count rate from a Radiacode RC110 scintillation detector, updated every few seconds.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1c17;
+  --ink-inverse:#ece8dd;
+  --signal:#d9963f;
+  --tile:#171a14;
+  --paper:#f4f1e8;
+  --paper-sunk:#e9e5d9;
+  --rule:#d3cebe;
+  --rule-dark:#2b3026;
+  --muted:#6d6a5c;
+  --muted-dark:#8d9483;
+  --link:#8a5a1e;
+  --link-hover:#d9963f;
+  --oxide:#c2543a;
+  --olive:#7fa651;
+  --slate:#5b8fb0;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Archivo",system-ui,sans-serif;
+  background:var(--paper-sunk);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.55;
+  text-wrap:pretty;
+}
+a{color:var(--link);transition:color 200ms ease}
+a:hover{color:var(--link-hover)}
+a:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.mono{font-family:"JetBrains Mono",monospace}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+/* ---------- header ---------- */
+header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
+.hdr{display:flex;align-items:center;gap:14px;padding:16px 24px;max-width:960px;margin:0 auto}
+.hdr img{width:30px;height:30px;display:block}
+.hdr .wordmark{font-weight:700;font-size:15px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-inverse);text-decoration:none}
+.hdr nav{margin-left:40px;display:flex;gap:20px}
+.hdr nav a{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-dark);text-decoration:none}
+.hdr nav a:hover,.hdr nav a[aria-current]{color:var(--ink-inverse)}
+.hdr .live{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--signal)}
+.hdr .live i{width:7px;height:7px;border-radius:50%;background:var(--signal);flex:none}
+.hdr .live.is-down{color:var(--muted-dark)}
+.hdr .live.is-down i{background:var(--muted-dark)}
+.hdr .live.is-live i{animation:beat 2s ease-in-out infinite}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.3}}
+@media (max-width:700px){.hdr nav{display:none}}
+
+/* ---------- page head ---------- */
+.pagehead{padding:44px 0 26px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:block}
+.pagehead h1{font-weight:700;font-size:clamp(28px,4.6vw,42px);letter-spacing:-.015em;line-height:1.08}
+.pagehead .thesis{margin-top:12px;font-size:16px;line-height:1.5;max-width:34em;color:var(--muted)}
+.tick-gamma{display:block;height:5px;width:64px;background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 8px);margin-bottom:16px}
+
+/* ---------- hero reading ---------- */
+.now{border:1px solid var(--rule);background:var(--paper);display:grid;grid-template-columns:minmax(220px,1fr) 1.4fr;margin-bottom:10px}
+.now-main{padding:24px 22px;border-right:1px solid var(--rule)}
+.now-main dt{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.now-val{font-family:"JetBrains Mono",monospace;font-size:clamp(34px,6vw,52px);font-weight:500;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.now-unit{font-size:14px;color:var(--muted);letter-spacing:.08em;margin-left:6px}
+.now-verdict{margin-top:12px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.now-verdict i{width:7px;height:7px;border-radius:50%;background:var(--olive);flex:none}
+.now-ctx{padding:24px 22px;font-size:13.5px;color:var(--muted);line-height:1.6}
+.now-ctx b{color:var(--ink);font-weight:600}
+@media (max-width:700px){.now{grid-template-columns:1fr}.now-main{border-right:none;border-bottom:1px solid var(--rule)}}
+
+/* ---------- readouts ---------- */
+.readout{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.readout div{padding:14px;border-right:1px solid var(--rule)}
+.readout div:last-child{border-right:none}
+.readout dt{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.readout dd{font-family:"JetBrains Mono",monospace;font-size:20px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
+.readout dd small{font-size:11px;color:var(--muted);letter-spacing:.1em}
+@media (max-width:700px){.readout{grid-template-columns:1fr 1fr}.readout div{border-bottom:1px solid var(--rule)}}
+
+/* ---------- chart ---------- */
+.card{border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.card-head{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule);font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+/* Units keep their case: uppercased "µSv/h" reads as "MSV/H" — millisievert,
+   a thousand times the real figure. Never transform a unit. */
+.unit{text-transform:none}
+.chartwrap{position:relative;padding:14px 8px 6px}
+svg.trace{display:block;width:100%;height:auto}
+.axis{stroke:var(--rule);stroke-width:1}
+.gridline{stroke:var(--rule);stroke-width:1;stroke-dasharray:2 5}
+.axis-lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;fill:var(--muted)}
+.band-normal{fill:var(--olive);opacity:.10}
+.band-lbl{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.12em;fill:var(--muted)}
+.spread{fill:var(--ink);opacity:.13}
+.line{fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.head-dot{fill:var(--signal);stroke:var(--paper);stroke-width:2}
+.crosshair{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:0}
+.chart-empty{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;fill:var(--muted);text-anchor:middle}
+.tip{position:absolute;pointer-events:none;background:var(--tile);color:var(--ink-inverse);padding:9px 11px;font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.6;white-space:nowrap;opacity:0;transition:opacity 120ms ease;z-index:5}
+.tip.on{opacity:1}
+.tip b{color:var(--signal);font-weight:500}
+
+/* ---------- table ---------- */
+.tbl-scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-family:"JetBrains Mono",monospace;font-size:12px}
+th{text-align:left;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:9px 14px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:8px 14px;border-bottom:1px solid var(--paper-sunk);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td.num{text-align:right}
+.dim{color:var(--muted)}
+.tbl-empty{padding:22px 14px;text-align:center;color:var(--muted);font-size:12px;letter-spacing:.1em}
+
+.note{font-size:12.5px;color:var(--muted);margin-bottom:56px;max-width:46em}
+.note code{font-size:12px;background:var(--paper);padding:1px 5px;border:1px solid var(--rule)}
+.note p+p{margin-top:.8em}
+
+footer{background:var(--tile);color:var(--muted-dark);padding:26px 0 44px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+footer a{color:var(--signal);text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <img src="../assets/mark-on-dark.svg" alt="" width="30" height="30">
+    <a class="wordmark" href="/">Luisterpost</a>
+    <nav aria-label="Live channels">
+      <a href="/aircraft/">Planes</a>
+      <a href="/radiation/" aria-current="page">Radiation</a>
+    </nav>
+    <span class="live mono is-down" id="conn"><i aria-hidden="true"></i><span id="conn-txt">CONNECTING</span></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="pagehead">
+    <span class="tick-gamma" aria-hidden="true"></span>
+    <span class="eyebrow">Channel 02 · Gamma 0.05–3 MeV · Radiacode RC110</span>
+    <h1>The background, continuously</h1>
+    <p class="thesis">A Radiacode RC110 scintillation detector counting gamma photons in a house in Utrecht. Cosmic rays, traces in the building materials, radon washed out of the air by rain — the ordinary radiation everyone lives in, measured every few seconds.</p>
+  </section>
+
+  <dl class="now">
+    <div class="now-main">
+      <dt>Dose rate now</dt>
+      <div><span class="now-val" id="dose">—</span><span class="now-unit mono">µSv/h</span></div>
+      <div class="now-verdict mono" id="verdict"><i aria-hidden="true"></i><span id="verdict-txt">Waiting</span></div>
+    </div>
+    <div class="now-ctx">
+      <p>Natural background at ground level is normally somewhere around <b>0.05–0.15&nbsp;µSv/h</b>, varying with geology, altitude and weather. This station's own long-run median is <b>0.082&nbsp;µSv/h</b>.</p>
+      <p style="margin-top:.7em">For scale: a single chest X-ray is roughly <b>20&nbsp;µSv</b>, and an Amsterdam–New&nbsp;York flight around <b>30–50&nbsp;µSv</b> in total, because there is far less atmosphere overhead to absorb cosmic rays.</p>
+    </div>
+  </dl>
+
+  <dl class="readout">
+    <div><dt>Count rate</dt><dd id="r-cps">—<small> cps</small></dd></div>
+    <div><dt>3 h mean</dt><dd id="r-mean">—</dd></div>
+    <div><dt>3 h low</dt><dd id="r-min">—</dd></div>
+    <div><dt>3 h high</dt><dd id="r-max">—</dd></div>
+  </dl>
+
+  <section class="card">
+    <div class="card-head">
+      <span>Dose rate <span class="unit">µSv/h</span> · last 3 hours</span>
+      <span id="chart-note">1-minute means</span>
+    </div>
+    <div class="chartwrap">
+      <svg class="trace" id="chart" viewBox="0 0 900 320" role="img"
+           aria-label="Gamma dose rate over the last three hours, in microsieverts per hour. The shaded band marks the 0.05 to 0.15 range typical of natural background. The same data is summarised hourly in the table below.">
+        <g id="c-grid"></g>
+        <g id="c-band"></g>
+        <g id="c-spread"></g>
+        <path id="c-line" class="line"></path>
+        <circle id="c-head" class="head-dot" r="4" style="display:none"></circle>
+        <line id="c-cross" class="crosshair" y1="10" y2="272"></line>
+        <rect id="c-hit" x="60" y="10" width="820" height="262" fill="transparent" style="cursor:crosshair"></rect>
+        <text id="c-empty" class="chart-empty" x="470" y="150">Collecting…</text>
+      </svg>
+      <div class="tip mono" id="tip" role="status" aria-live="off"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span>Hourly summary</span><span>mean · low · high</span></div>
+    <div class="tbl-scroll">
+      <table>
+        <caption style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Gamma dose rate by hour, most recent first</caption>
+        <thead>
+          <tr>
+            <th scope="col">Hour</th>
+            <th scope="col" style="text-align:right">Mean <span class="unit">µSv/h</span></th>
+            <th scope="col" style="text-align:right">Low</th>
+            <th scope="col" style="text-align:right">High</th>
+            <th scope="col" style="text-align:right">Minutes</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="tbl-empty mono" id="tbl-empty">Waiting for the first minute of data…</div>
+    </div>
+  </section>
+
+  <div class="note">
+    <p>Live values arrive on the public MQTT broker at <code>wss://live.luisterpost.io</code>,
+    topic <code>luisterpost/radiation/realtime</code>, roughly every three seconds. The
+    three-hour trace is published as one-minute means on
+    <code>luisterpost/radiation/history</code> so a page opened just now still has
+    something to show.</p>
+    <p>Dose rate is what the instrument reports, not a measurement of anyone's exposure.
+    A scintillation detector on a shelf indoors is not a personal dosimeter, and short
+    excursions are normal — rain washes radon daughters out of the air and the trace
+    lifts for an hour or two.</p>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Luisterpost · Utrecht NL · 52.09°N 5.12°E</span>
+    <span>Code MIT · Data CC BY 4.0 · <a href="https://github.com/artintel-nl/luisterpost">GitHub</a></span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"
+        integrity="sha384-u4uqeACkFcoKl57rBQJHVGDd1pqhW4w8X3WjTu1ZksPdxoLqdt34jpoNkJisE25W"
+        crossorigin="anonymous"></script>
+<script>
+(function () {
+  "use strict";
+
+  var BROKER = "wss://live.luisterpost.io/";
+  // Typical natural background. Drawn as a reference band because a bare number in
+  // microsieverts means nothing to most people without something to compare it to.
+  var NORMAL_LO = 0.05, NORMAL_HI = 0.15;
+
+  var W = 900, H = 320, L = 60, R = 20, T = 10, B = 48;
+  var PW = W - L - R, PH = H - T - B;
+
+  var points = [];        // [epoch_s, mean, min, max]
+  var els = {};
+  ["c-grid","c-band","c-spread","c-line","c-head","c-cross","c-hit","c-empty",
+   "tip","tbody","tbl-empty","dose","verdict","verdict-txt","conn","conn-txt",
+   "r-cps","r-mean","r-min","r-max","chart-note"]
+    .forEach(function (id) { els[id] = document.getElementById(id); });
+
+  function svg(tag, attrs) {
+    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function fmt(v, dp) { return v == null ? "—" : v.toFixed(dp == null ? 3 : dp); }
+
+  // ---- scales --------------------------------------------------------------
+  var yLo = 0.04, yHi = 0.18, tLo = 0, tHi = 1;
+  function computeScales() {
+    if (!points.length) return;
+    tLo = points[0][0]; tHi = points[points.length - 1][0];
+    if (tHi - tLo < 60) tHi = tLo + 60;
+    var lo = Math.min(NORMAL_LO, Math.min.apply(null, points.map(function (p) { return p[2]; })));
+    var hi = Math.max(NORMAL_HI, Math.max.apply(null, points.map(function (p) { return p[3]; })));
+    var pad = Math.max((hi - lo) * 0.12, 0.005);
+    yLo = Math.max(0, lo - pad); yHi = hi + pad;
+  }
+  function X(t) { return L + (t - tLo) / (tHi - tLo) * PW; }
+  function Y(v) { return T + PH - (v - yLo) / (yHi - yLo) * PH; }
+
+  // ---- render --------------------------------------------------------------
+  function render() {
+    els["c-empty"].style.display = points.length ? "none" : "";
+    if (!points.length) return;
+    computeScales();
+
+    // grid + axes
+    els["c-grid"].textContent = "";
+    var ticks = 5;
+    for (var i = 0; i <= ticks; i++) {
+      var v = yLo + (yHi - yLo) * i / ticks, y = Y(v);
+      els["c-grid"].appendChild(svg("line", { class: "gridline", x1: L, x2: L + PW, y1: y, y2: y }));
+      var lbl = svg("text", { class: "axis-lbl", x: L - 8, y: y + 3, "text-anchor": "end" });
+      lbl.textContent = v.toFixed(3);
+      els["c-grid"].appendChild(lbl);
+    }
+    els["c-grid"].appendChild(svg("line", { class: "axis", x1: L, x2: L + PW, y1: T + PH, y2: T + PH }));
+
+    // time axis: one label per half hour
+    var span = tHi - tLo;
+    var step = span > 7200 ? 1800 : span > 3600 ? 900 : span > 900 ? 300 : 60;
+    var first = Math.ceil(tLo / step) * step;
+    for (var t = first; t <= tHi; t += step) {
+      var x = X(t);
+      els["c-grid"].appendChild(svg("line", { class: "gridline", x1: x, x2: x, y1: T, y2: T + PH }));
+      var d = new Date(t * 1000);
+      var tl = svg("text", { class: "axis-lbl", x: x, y: T + PH + 18, "text-anchor": "middle" });
+      tl.textContent = String(d.getHours()).padStart(2, "0") + ":" +
+                       String(d.getMinutes()).padStart(2, "0");
+      els["c-grid"].appendChild(tl);
+    }
+
+    // reference band for typical background
+    els["c-band"].textContent = "";
+    var bTop = Y(Math.min(NORMAL_HI, yHi)), bBot = Y(Math.max(NORMAL_LO, yLo));
+    if (bBot > bTop) {
+      els["c-band"].appendChild(svg("rect", { class: "band-normal",
+        x: L, y: bTop, width: PW, height: bBot - bTop }));
+      var bl = svg("text", { class: "band-lbl", x: L + 6, y: bTop + 12 });
+      bl.textContent = "TYPICAL NATURAL BACKGROUND 0.05–0.15";
+      els["c-band"].appendChild(bl);
+    }
+
+    // min/max spread as a soft envelope, mean as the line
+    var up = points.map(function (p) { return X(p[0]).toFixed(1) + " " + Y(p[3]).toFixed(1); });
+    var dn = points.slice().reverse().map(function (p) { return X(p[0]).toFixed(1) + " " + Y(p[2]).toFixed(1); });
+    els["c-spread"].textContent = "";
+    els["c-spread"].appendChild(svg("path", { class: "spread",
+      d: "M" + up.join(" L") + " L" + dn.join(" L") + " Z" }));
+
+    els["c-line"].setAttribute("d", "M" + points.map(function (p) {
+      return X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1);
+    }).join(" L"));
+
+    var last = points[points.length - 1];
+    els["c-head"].setAttribute("cx", X(last[0]));
+    els["c-head"].setAttribute("cy", Y(last[1]));
+    els["c-head"].style.display = "";
+
+    // readouts from the window
+    var means = points.map(function (p) { return p[1]; });
+    els["r-mean"].textContent = fmt(means.reduce(function (a, b) { return a + b; }, 0) / means.length);
+    els["r-min"].textContent = fmt(Math.min.apply(null, points.map(function (p) { return p[2]; })));
+    els["r-max"].textContent = fmt(Math.max.apply(null, points.map(function (p) { return p[3]; })));
+    els["chart-note"].textContent = points.length + " × 1-minute means";
+
+    renderTable();
+  }
+
+  function renderTable() {
+    var hours = new Map();
+    points.forEach(function (p) {
+      var h = Math.floor(p[0] / 3600) * 3600;
+      var e = hours.get(h);
+      if (!e) hours.set(h, { sum: p[1], n: 1, lo: p[2], hi: p[3] });
+      else { e.sum += p[1]; e.n++; e.lo = Math.min(e.lo, p[2]); e.hi = Math.max(e.hi, p[3]); }
+    });
+    var rows = Array.from(hours.entries()).sort(function (a, b) { return b[0] - a[0]; });
+    els["tbl-empty"].style.display = rows.length ? "none" : "";
+    var frag = document.createDocumentFragment();
+    rows.forEach(function (r) {
+      var d = new Date(r[0] * 1000), tr = document.createElement("tr");
+      function cell(text, cls) {
+        var td = document.createElement("td");
+        td.textContent = text; if (cls) td.className = cls; tr.appendChild(td);
+      }
+      cell(String(d.getHours()).padStart(2, "0") + ":00");
+      cell(fmt(r[1].sum / r[1].n), "num");
+      cell(fmt(r[1].lo), "num");
+      cell(fmt(r[1].hi), "num");
+      cell(String(r[1].n), "num dim");
+      frag.appendChild(tr);
+    });
+    els.tbody.textContent = "";
+    els.tbody.appendChild(frag);
+  }
+
+  // ---- hover ---------------------------------------------------------------
+  els["c-hit"].addEventListener("mousemove", function (e) {
+    if (!points.length) return;
+    var svgEl = els["c-hit"].ownerSVGElement;
+    var r = svgEl.getBoundingClientRect();
+    var px = (e.clientX - r.left) / r.width * W;
+    var t = tLo + (px - L) / PW * (tHi - tLo);
+    var best = points[0], bd = Infinity;
+    points.forEach(function (p) { var d = Math.abs(p[0] - t); if (d < bd) { bd = d; best = p; } });
+    els["c-cross"].setAttribute("x1", X(best[0]));
+    els["c-cross"].setAttribute("x2", X(best[0]));
+    els["c-cross"].style.opacity = 1;
+    var d = new Date(best[0] * 1000);
+    els.tip.textContent = "";
+    var b = document.createElement("b");
+    b.textContent = fmt(best[1]) + " µSv/h";
+    els.tip.appendChild(b);
+    [String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"),
+     "low " + fmt(best[2]) + " · high " + fmt(best[3])].forEach(function (line) {
+      els.tip.appendChild(document.createElement("br"));
+      els.tip.appendChild(document.createTextNode(line));
+    });
+    els.tip.classList.add("on");
+    var wrapBox = els.tip.parentElement.getBoundingClientRect();
+    var lx = e.clientX - wrapBox.left + 14, ly = e.clientY - wrapBox.top + 14;
+    if (lx + els.tip.offsetWidth > wrapBox.width) lx -= els.tip.offsetWidth + 28;
+    els.tip.style.left = lx + "px"; els.tip.style.top = ly + "px";
+  });
+  els["c-hit"].addEventListener("mouseleave", function () {
+    els.tip.classList.remove("on");
+    els["c-cross"].style.opacity = 0;
+  });
+
+  // ---- live ----------------------------------------------------------------
+  function setConn(state, text) {
+    els.conn.className = "live mono " + state;
+    els["conn-txt"].textContent = text;
+  }
+  function setVerdict(dose) {
+    var t = els["verdict-txt"], dot = els.verdict.querySelector("i");
+    if (dose < NORMAL_LO)      { t.textContent = "Below typical range"; dot.style.background = "var(--slate)"; }
+    else if (dose <= NORMAL_HI){ t.textContent = "Within typical range"; dot.style.background = "var(--olive)"; }
+    else                       { t.textContent = "Above typical range"; dot.style.background = "var(--signal)"; }
+  }
+
+  setConn("is-down", "CONNECTING");
+  var client = mqtt.connect(BROKER, {
+    clientId: "luisterpost-rad-" + Math.random().toString(16).slice(2, 10),
+    keepalive: 45, reconnectPeriod: 4000, clean: true
+  });
+
+  client.on("connect", function () {
+    setConn("is-live", "RECEIVING");
+    client.subscribe("luisterpost/radiation/realtime");
+    client.subscribe("luisterpost/radiation/history");
+    client.subscribe("luisterpost/radiation/status");
+    client.subscribe("luisterpost/station/status");
+  });
+  client.on("reconnect", function () { setConn("is-down", "RECONNECTING"); });
+  client.on("close",     function () { setConn("is-down", "OFFLINE"); });
+  client.on("error",     function () { setConn("is-down", "ERROR"); });
+
+  client.on("message", function (topic, payload) {
+    var d;
+    try { d = JSON.parse(payload.toString()); } catch (e) { return; }
+
+    if (topic === "luisterpost/radiation/history") {
+      if (!Array.isArray(d.points)) return;
+      points = d.points.filter(function (p) {
+        return Array.isArray(p) && p.length >= 4 && p.every(function (v) { return isFinite(v); });
+      });
+      render();
+      return;
+    }
+    if (topic === "luisterpost/radiation/realtime") {
+      var dose = d.dose_rate_uSvh;
+      if (isFinite(dose)) {
+        els.dose.textContent = dose.toFixed(4);
+        setVerdict(dose);
+      }
+      if (isFinite(d.count_rate_cps)) {
+        els["r-cps"].innerHTML = d.count_rate_cps.toFixed(2) + "<small> cps</small>";
+      }
+      return;
+    }
+    if (topic === "luisterpost/radiation/status" && d.status && d.status !== "online") {
+      setConn("is-down", "DETECTOR OFFLINE");
+      return;
+    }
+    if (topic === "luisterpost/station/status" && d.online === false) {
+      setConn("is-down", "STATION OFFLINE");
+    }
+  });
+})();
+</script>
+</body>
+</html>

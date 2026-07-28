@@ -148,6 +148,7 @@ footer a{color:var(--signal);text-decoration:none}
     <a class="wordmark" href="/">Luisterpost</a>
     <nav aria-label="Live channels">
       <a href="/aircraft/">Planes</a>
+      <a href="/radiation/">Radiation</a>
     </nav>
     <span class="live mono is-idle" id="rx"><i aria-hidden="true"></i><span id="rx-txt">LISTENING</span></span>
   </div>
@@ -178,7 +179,7 @@ footer a{color:var(--signal);text-decoration:none}
   </section>
 
   <section class="chart" aria-label="The four bands the station receives on">
-    <div class="chart-head"><span>Receiving bands</span><span>4 media · 1 live channel</span></div>
+    <div class="chart-head"><span>Receiving bands</span><span>4 media · 2 live channels</span></div>
     <div class="bands">
       <div class="band">
         <span class="tick t-sound" aria-hidden="true"></span>
@@ -198,15 +199,15 @@ footer a{color:var(--signal);text-decoration:none}
         <p class="range mono">905 NM</p>
         <p class="what">Near-infrared laser backscatter off dust and pollen. Not yet built.</p>
       </div>
-      <div class="band">
+      <a class="band" href="#ch02">
         <span class="tick t-gamma" aria-hidden="true"></span>
         <h2>Gamma</h2><span class="nl">gamma</span>
         <p class="range mono">0.05 – 3 MEV</p>
         <p class="what">Ionizing radiation: cosmic rays, radon washout, the background itself.</p>
-      </div>
+      </a>
     </div>
   </section>
-  <p class="chart-note">The station receives on four physical media. One channel is published live so far — the rest of the instruments report into the station’s own logs.</p>
+  <p class="chart-note">The station receives on four physical media. Two channels are published live so far — the rest of the instruments report into the station’s own logs.</p>
 
   <section class="prose">
     <p>A luisterpost is what the Dutch military called a signals intercept station — a room full of receivers, pointed at whatever was passing through the air. This one is not on a border or a hilltop. It is an ordinary house in Utrecht, fitted over the years with microphones, antennas, particle detectors and weather instruments, all reporting into one small MQTT broker in the meter cupboard.</p>
@@ -220,6 +221,13 @@ footer a{color:var(--signal);text-decoration:none}
       <span class="ch mono">CH 01</span>
       <div><h3>Planes — ADS-B</h3><p class="desc">Transponder decoding at 1090 MHz with a from-scratch decoder, plus an enrichment pipeline for routes and aircraft types. <a href="/aircraft/">See what is overhead right now →</a></p></div>
       <span class="medium mono md-radio">Radio 1090 MHz</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch02">
+      <span class="ch mono">CH 02</span>
+      <div><h3>Radiation — Radiacode RC110</h3><p class="desc">Gamma background monitor: a Radiacode RC110 scintillation detector on an ESP32-P4 bridge, logging dose rate and daily energy spectra. <a href="/radiation/">See the background right now →</a></p></div>
+      <span class="medium mono md-gamma">Gamma 0.05–3 MeV</span>
       <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
     </div>
   </section>
