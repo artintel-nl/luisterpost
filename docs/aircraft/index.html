@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aircraft — Luisterpost</title>
+<meta name="description" content="Live 1090 MHz ADS-B reception at the Luisterpost listening post in Utrecht: every aircraft transponder heard overhead, plotted by range and bearing from the station.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1c17;
+  --ink-inverse:#ece8dd;
+  --signal:#d9963f;
+  --tile:#171a14;
+  --paper:#f4f1e8;
+  --paper-sunk:#e9e5d9;
+  --rule:#d3cebe;
+  --rule-dark:#2b3026;
+  --muted:#6d6a5c;
+  --muted-dark:#8d9483;
+  --link:#8a5a1e;
+  --link-hover:#d9963f;
+  --oxide:#c2543a;
+  --olive:#7fa651;
+  --slate:#5b8fb0;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Archivo",system-ui,sans-serif;
+  background:var(--paper-sunk);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.55;
+  text-wrap:pretty;
+}
+a{color:var(--link);transition:color 200ms ease}
+a:hover{color:var(--link-hover)}
+a:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.mono{font-family:"JetBrains Mono",monospace}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+/* ---------- header (matches the landing page) ---------- */
+header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
+.hdr{display:flex;align-items:center;gap:14px;padding:16px 24px;max-width:960px;margin:0 auto}
+.hdr img{width:30px;height:30px;display:block}
+.hdr .wordmark{font-weight:700;font-size:15px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-inverse);text-decoration:none}
+.hdr nav{margin-left:40px;display:flex;gap:20px}
+.hdr nav a{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-dark);text-decoration:none}
+.hdr nav a:hover,.hdr nav a[aria-current]{color:var(--ink-inverse)}
+.hdr .live{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--signal)}
+.hdr .live i{width:7px;height:7px;border-radius:50%;background:var(--signal);flex:none}
+.hdr .live.is-down{color:var(--muted-dark)}
+.hdr .live.is-down i{background:var(--muted-dark)}
+.hdr .live.is-live i{animation:beat 2s ease-in-out infinite}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.3}}
+@media (max-width:700px){.hdr nav{display:none}}
+
+/* ---------- page head ---------- */
+.pagehead{padding:44px 0 26px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:block}
+.pagehead h1{font-weight:700;font-size:clamp(28px,4.6vw,42px);letter-spacing:-.015em;line-height:1.08}
+.pagehead .thesis{margin-top:12px;font-size:16px;line-height:1.5;max-width:34em;color:var(--muted)}
+.tick-radio{display:block;height:5px;width:64px;background:var(--oxide);margin-bottom:16px}
+
+/* ---------- readout strip ---------- */
+.readout{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.readout div{padding:14px;border-right:1px solid var(--rule)}
+.readout div:last-child{border-right:none}
+.readout dt{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.readout dd{font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
+.readout dd small{font-size:11px;color:var(--muted);letter-spacing:.1em}
+@media (max-width:700px){.readout{grid-template-columns:1fr 1fr}.readout div{border-bottom:1px solid var(--rule)}}
+
+/* ---------- plot ---------- */
+.plotcard{border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.card-head{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule);font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.plotwrap{position:relative;padding:8px;display:flex;justify-content:center}
+svg.scope{display:block;width:100%;max-width:620px;height:auto;touch-action:manipulation}
+.ring{fill:none;stroke:var(--rule);stroke-width:1}
+.ring-lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.12em;fill:var(--muted)}
+.spoke{stroke:var(--rule);stroke-width:1;stroke-dasharray:2 5}
+.cardinal{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;fill:var(--muted);text-anchor:middle;dominant-baseline:middle}
+.trail{fill:none;stroke:var(--oxide);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;opacity:.3}
+.craft{fill:var(--oxide);stroke:var(--paper);stroke-width:2}
+.craft-hit{fill:transparent;cursor:pointer}
+.craft-lbl{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:500;fill:var(--ink);letter-spacing:.06em}
+.ping{fill:none;stroke:var(--oxide);stroke-width:1.5;animation:ping 1.1s ease-out forwards;pointer-events:none}
+@keyframes ping{from{r:3;opacity:.7}to{r:17;opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  .ping{display:none}
+  .hdr .live.is-live i{animation:none}
+}
+.empty{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;fill:var(--muted);text-anchor:middle}
+
+/* tooltip */
+.tip{position:absolute;pointer-events:none;background:var(--tile);color:var(--ink-inverse);padding:9px 11px;font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.6;white-space:nowrap;opacity:0;transition:opacity 120ms ease;z-index:5}
+.tip.on{opacity:1}
+.tip b{color:var(--signal);font-weight:500}
+
+/* ---------- table ---------- */
+.tablecard{border:1px solid var(--rule);background:var(--paper);margin-bottom:12px}
+.tbl-scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-family:"JetBrains Mono",monospace;font-size:12px}
+th{text-align:left;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:9px 14px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:8px 14px;border-bottom:1px solid var(--paper-sunk);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--paper-sunk)}
+td.cs{font-weight:500}
+td.num{text-align:right}
+.dim{color:var(--muted)}
+.tbl-empty{padding:26px 14px;text-align:center;color:var(--muted);font-size:12px;letter-spacing:.1em}
+
+.note{font-size:12.5px;color:var(--muted);margin-bottom:56px;max-width:46em}
+.note code{font-size:12px;background:var(--paper);padding:1px 5px;border:1px solid var(--rule)}
+
+footer{background:var(--tile);color:var(--muted-dark);padding:26px 0 44px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+footer a{color:var(--signal);text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <img src="../assets/mark-on-dark.svg" alt="" width="30" height="30">
+    <a class="wordmark" href="/">Luisterpost</a>
+    <nav aria-label="Channels">
+      <a href="/#ch01">Birds</a>
+      <a href="/aircraft/" aria-current="page">ADS-B</a>
+      <a href="/#ch05">Remote-ID</a>
+      <a href="/#ch08">Radiacode</a>
+    </nav>
+    <span class="live mono is-down" id="conn"><i aria-hidden="true"></i><span id="conn-txt">CONNECTING</span></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="pagehead">
+    <span class="tick-radio" aria-hidden="true"></span>
+    <span class="eyebrow">Channel 04 · Radio 1090 MHz · from-scratch decoder</span>
+    <h1>Everything overhead, right now</h1>
+    <p class="thesis">Every aircraft within reception range broadcasts its position twice a second on 1090 MHz. The station listens and decodes them. Nothing here is requested — it is simply what arrives.</p>
+  </section>
+
+  <dl class="readout">
+    <div><dt>Aircraft heard</dt><dd id="r-count">—</dd></div>
+    <div><dt>Nearest</dt><dd id="r-near">—<small> km</small></dd></div>
+    <div><dt>Highest</dt><dd id="r-high">—<small> ft</small></dd></div>
+    <div><dt>Positions / min</dt><dd id="r-rate">—</dd></div>
+  </dl>
+
+  <section class="plotcard">
+    <div class="card-head">
+      <span>Range &amp; bearing from the station</span>
+      <span id="scope-scale">120 km radius</span>
+    </div>
+    <div class="plotwrap">
+      <svg class="scope" id="scope" viewBox="0 0 800 800" role="img"
+           aria-label="Polar plot of aircraft currently heard, by range and bearing from the listening post. The same data is listed in the table below.">
+        <g id="grid"></g>
+        <g id="trails"></g>
+        <g id="pings"></g>
+        <g id="craft"></g>
+        <g id="labels"></g>
+        <text id="empty" class="empty" x="400" y="400">Listening…</text>
+      </svg>
+      <div class="tip mono" id="tip" role="status" aria-live="off"></div>
+    </div>
+  </section>
+
+  <section class="tablecard">
+    <div class="card-head"><span>Contacts</span><span>by range</span></div>
+    <div class="tbl-scroll">
+      <table>
+        <caption class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Aircraft currently heard, nearest first</caption>
+        <thead>
+          <tr>
+            <th scope="col">Callsign</th><th scope="col">ICAO</th>
+            <th scope="col" style="text-align:right">Altitude</th>
+            <th scope="col" style="text-align:right">Range</th>
+            <th scope="col" style="text-align:right">Bearing</th>
+            <th scope="col" style="text-align:right">Last heard</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="tbl-empty mono" id="tbl-empty">Waiting for the first transponder…</div>
+    </div>
+  </section>
+
+  <p class="note">
+    Positions come straight off the air at the station and are published to a public
+    MQTT broker at <code>wss://live.luisterpost.io</code>, topic
+    <code>luisterpost/aircraft/+/position</code> — connect your own client if you like.
+    Range and bearing are computed in your browser from the station's published
+    coordinates, which are given at city precision. A contact fades once it has not
+    been heard for a minute.
+  </p>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Luisterpost · Utrecht NL · 52.09°N 5.12°E</span>
+    <span>Code MIT · Data CC BY 4.0 · <a href="https://github.com/artintel-nl/luisterpost">GitHub</a></span>
+  </div>
+</footer>
+
+<!-- Pinned version + Subresource Integrity: a compromised CDN cannot swap this out. -->
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"
+        integrity="sha384-u4uqeACkFcoKl57rBQJHVGDd1pqhW4w8X3WjTu1ZksPdxoLqdt34jpoNkJisE25W"
+        crossorigin="anonymous"></script>
+<script>
+(function () {
+  "use strict";
+
+  var BROKER   = "wss://live.luisterpost.io/";
+  // Reception here runs to roughly 60–80 km, and traffic clusters well inside that.
+  // A wider scope just leaves empty paper around a knot of marks in the middle.
+  var VIEW_KM  = 80;
+  var RINGS    = [20, 40, 60, 80];
+  var STALE_MS = 60000;        // a contact fades out over this long, then is dropped
+  var TRAIL_N  = 10;
+
+  var SIZE = 800, CX = 400, CY = 400, R_PX = 350;
+  var PX_PER_KM = R_PX / VIEW_KM;
+
+  // Station position — overwritten by luisterpost/station/info when it arrives.
+  var station = { lat: 52.09, lon: 5.12 };
+
+  var craft = new Map();       // hex -> {lat,lon,alt,cs,seen,trail:[{x,y}]}
+  var pingTimes = [];          // timestamps, for the positions/min readout
+  var els = {};
+  ["grid","trails","pings","craft","labels","empty","tip","tbody","tbl-empty",
+   "r-count","r-near","r-high","r-rate","conn","conn-txt","scope-scale"]
+    .forEach(function (id) { els[id] = document.getElementById(id); });
+
+  // ---- geometry ------------------------------------------------------------
+  // Equirectangular around the station: fine at these ranges, and it keeps the
+  // plot honest about bearing, which is what a listening post cares about.
+  function project(lat, lon) {
+    var latRad = station.lat * Math.PI / 180;
+    var dx = (lon - station.lon) * 111.32 * Math.cos(latRad);   // km east
+    var dy = (lat - station.lat) * 110.57;                       // km north
+    return { dx: dx, dy: dy, km: Math.hypot(dx, dy),
+             brg: (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360 };
+  }
+  function toPx(p) { return { x: CX + p.dx * PX_PER_KM, y: CY - p.dy * PX_PER_KM }; }
+
+  // ---- static grid ---------------------------------------------------------
+  function svg(tag, attrs) {
+    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  var ringLabelPts = [];       // seeded into the label collision test below
+  (function drawGrid() {
+    var g = els.grid;
+    RINGS.forEach(function (km) {
+      g.appendChild(svg("circle", { class: "ring", cx: CX, cy: CY, r: km * PX_PER_KM }));
+      var x = CX + 5, y = CY - km * PX_PER_KM - 5;
+      var lbl = svg("text", { class: "ring-lbl", x: x, y: y });
+      lbl.textContent = km + " KM";
+      g.appendChild(lbl);
+      ringLabelPts.push({ x: x - 9, y: y + 8 });   // as an aircraft label anchor would sit
+    });
+    // Diagonals only — a spoke up the N axis would sit directly behind the range
+    // labels and read as if it were the thing being labelled.
+    [45, 135].forEach(function (deg) {
+      var a = deg * Math.PI / 180, r = R_PX;
+      g.appendChild(svg("line", { class: "spoke",
+        x1: CX - Math.sin(a) * r, y1: CY + Math.cos(a) * r,
+        x2: CX + Math.sin(a) * r, y2: CY - Math.cos(a) * r }));
+    });
+    [["N",0],["E",90],["S",180],["W",270]].forEach(function (c) {
+      var a = c[1] * Math.PI / 180, r = R_PX + 22;
+      var t = svg("text", { class: "cardinal",
+        x: CX + Math.sin(a) * r, y: CY - Math.cos(a) * r });
+      t.textContent = c[0];
+      g.appendChild(t);
+    });
+    // The station itself, drawn as the mast-and-arcs mark.
+    var m = svg("g", { transform: "translate(" + CX + "," + CY + ")", opacity: ".85" });
+    m.appendChild(svg("path", { d: "M0 7 V -4", stroke: "#1a1c17", "stroke-width": 2.2,
+                                fill: "none", "stroke-linecap": "round" }));
+    m.appendChild(svg("path", { d: "M-6 7 H 6", stroke: "#1a1c17", "stroke-width": 2.2,
+                                fill: "none", "stroke-linecap": "round" }));
+    m.appendChild(svg("circle", { cx: 0, cy: -7.5, r: 2.6, fill: "#1a1c17" }));
+    els.grid.appendChild(m);
+  })();
+
+  // ---- rendering -----------------------------------------------------------
+  function fmtAge(ms) {
+    var s = Math.round(ms / 1000);
+    return s < 60 ? s + "s" : Math.floor(s / 60) + "m " + (s % 60) + "s";
+  }
+
+  function render() {
+    var now = Date.now();
+    var list = [], offPlot = 0;
+
+    craft.forEach(function (a, hex) {
+      if (now - a.seen > STALE_MS) { craft.delete(hex); return; }
+      var p = project(a.lat, a.lon);
+      var it = { hex: hex, a: a, p: p, age: now - a.seen };
+      // Beyond the scope edge it is still heard, and still belongs in the table and
+      // the count — it just has nowhere to be drawn.
+      if (p.km > VIEW_KM) offPlot++;
+      list.push(it);
+    });
+    list.sort(function (x, y) { return x.p.km - y.p.km; });
+    els["scope-scale"].textContent = VIEW_KM + " km radius" +
+      (offPlot ? " · " + offPlot + " beyond" : "");
+
+    // plot
+    els.trails.textContent = ""; els.craft.textContent = ""; els.labels.textContent = "";
+    els.empty.style.display = list.length ? "none" : "";
+
+    // Selective direct labels, nearest first, and never overlapping: a candidate is
+    // skipped if it lands too close to one already placed. Traffic bunches over the
+    // city, so without this the centre of the plot becomes an unreadable pile.
+    var placed = ringLabelPts.slice();   // the range labels are labels too
+    function labelFits(pt) {
+      for (var j = 0; j < placed.length; j++) {
+        if (Math.abs(placed[j].x - pt.x) < 78 && Math.abs(placed[j].y - pt.y) < 15) return false;
+      }
+      return placed.length - ringLabelPts.length < 6;
+    }
+
+    list.forEach(function (it, i) {
+      if (it.p.km > VIEW_KM) return;            // in the table, off the scope
+      var pt = toPx(it.p);
+      var fade = Math.max(0.18, 1 - it.age / STALE_MS);
+
+      if (it.a.trail.length > 1) {
+        var d = it.a.trail.map(function (t, j) {
+          return (j ? "L" : "M") + t.x.toFixed(1) + " " + t.y.toFixed(1);
+        }).join(" ");
+        var path = svg("path", { class: "trail", d: d });
+        path.style.opacity = 0.3 * fade;
+        els.trails.appendChild(path);
+      }
+
+      var dot = svg("circle", { class: "craft", cx: pt.x, cy: pt.y, r: 4.5 });
+      dot.style.opacity = fade;
+      els.craft.appendChild(dot);
+
+      // Generous hit target, independent of the visible mark.
+      var hit = svg("circle", { class: "craft-hit", cx: pt.x, cy: pt.y, r: 15 });
+      hit.addEventListener("mouseenter", function (e) { showTip(it, e); });
+      hit.addEventListener("mousemove",  function (e) { moveTip(e); });
+      hit.addEventListener("mouseleave", hideTip);
+      els.craft.appendChild(hit);
+
+      if (it.a.cs && labelFits(pt)) {
+        placed.push(pt);
+        var t = svg("text", { class: "craft-lbl", x: pt.x + 9, y: pt.y - 8 });
+        t.textContent = it.a.cs;
+        t.style.opacity = fade;
+        els.labels.appendChild(t);
+      }
+    });
+
+    // readouts
+    els["r-count"].textContent = list.length || "—";
+    els["r-near"].innerHTML = (list.length ? list[0].p.km.toFixed(1) : "—") + "<small> km</small>";
+    var hi = list.reduce(function (m, it) {
+      return it.a.alt != null && it.a.alt > m ? it.a.alt : m; }, 0);
+    els["r-high"].innerHTML = (hi ? hi.toLocaleString("en") : "—") + "<small> ft</small>";
+    var cutoff = now - 60000;
+    pingTimes = pingTimes.filter(function (t) { return t > cutoff; });
+    els["r-rate"].textContent = pingTimes.length || "—";
+
+    // table — the accessible view of the same data.
+    // Built with textContent, never by assembling HTML: callsigns arrive over the air
+    // from strangers, so they are treated as hostile text all the way to the DOM.
+    els["tbl-empty"].style.display = list.length ? "none" : "";
+    var tb = document.createDocumentFragment();
+    list.forEach(function (it) {
+      var tr = document.createElement("tr");
+      function cell(text, cls) {
+        var td = document.createElement("td");
+        td.textContent = text;
+        if (cls) td.className = cls;
+        tr.appendChild(td);
+      }
+      cell(it.a.cs || "—", it.a.cs ? "cs" : "cs dim");
+      cell(it.hex, "dim");
+      cell(it.a.alt != null ? it.a.alt.toLocaleString("en") : "—", "num");
+      cell(it.p.km.toFixed(1), "num");
+      cell(Math.round(it.p.brg).toString().padStart(3, "0") + "°", "num");
+      cell(fmtAge(it.age), "num dim");
+      tb.appendChild(tr);
+    });
+    els.tbody.textContent = "";
+    els.tbody.appendChild(tb);
+  }
+
+  // ---- tooltip -------------------------------------------------------------
+  function showTip(it, e) {
+    // Same rule as the table: text nodes only, no HTML assembly.
+    els.tip.textContent = "";
+    var head = document.createElement("b");
+    head.textContent = it.a.cs || it.hex;
+    els.tip.appendChild(head);
+    [ "ICAO " + it.hex,
+      it.a.alt != null ? it.a.alt.toLocaleString("en") + " ft" : null,
+      it.p.km.toFixed(1) + " km · " + Math.round(it.p.brg) + "°",
+      "heard " + fmtAge(it.age) + " ago"
+    ].forEach(function (line) {
+      if (line === null) return;
+      els.tip.appendChild(document.createElement("br"));
+      els.tip.appendChild(document.createTextNode(line));
+    });
+    els.tip.classList.add("on");
+    moveTip(e);
+  }
+  function moveTip(e) {
+    var box = els.tip.parentElement.getBoundingClientRect();
+    var x = e.clientX - box.left + 14, y = e.clientY - box.top + 14;
+    if (x + els.tip.offsetWidth > box.width) x -= els.tip.offsetWidth + 28;
+    els.tip.style.left = x + "px";
+    els.tip.style.top = y + "px";
+  }
+  function hideTip() { els.tip.classList.remove("on"); }
+
+  // ---- connection ----------------------------------------------------------
+  function setConn(state, text) {
+    els.conn.className = "live mono " + state;
+    els["conn-txt"].textContent = text;
+  }
+
+  function ping(pt) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var c = svg("circle", { class: "ping", cx: pt.x, cy: pt.y, r: 3 });
+    els.pings.appendChild(c);
+    setTimeout(function () { c.remove(); }, 1150);
+  }
+
+  setConn("is-down", "CONNECTING");
+  var client = mqtt.connect(BROKER, {
+    clientId: "luisterpost-web-" + Math.random().toString(16).slice(2, 10),
+    keepalive: 45, reconnectPeriod: 4000, clean: true
+  });
+
+  client.on("connect", function () {
+    setConn("is-live", "RECEIVING");
+    client.subscribe("luisterpost/aircraft/+/position");
+    client.subscribe("luisterpost/station/info");
+    client.subscribe("luisterpost/station/status");
+  });
+  client.on("reconnect", function () { setConn("is-down", "RECONNECTING"); });
+  client.on("close",     function () { setConn("is-down", "OFFLINE"); });
+  client.on("error",     function () { setConn("is-down", "ERROR"); });
+
+  client.on("message", function (topic, payload) {
+    var d;
+    try { d = JSON.parse(payload.toString()); } catch (e) { return; }
+
+    if (topic === "luisterpost/station/info") {
+      if (typeof d.lat === "number" && typeof d.lon === "number") {
+        station.lat = d.lat; station.lon = d.lon;
+      }
+      return;
+    }
+    if (topic === "luisterpost/station/status") {
+      // The publisher's LWT: the station itself is down, so nothing new is coming.
+      if (d.online === false) setConn("is-down", "STATION OFFLINE");
+      else if (client.connected) setConn("is-live", "RECEIVING");
+      return;
+    }
+
+    // The publisher already validates these, but this page must also be safe pointed
+    // at any broker — including a local one someone stood up themselves. Validate
+    // again here rather than trusting the feed.
+    var m = topic.match(/^luisterpost\/aircraft\/([0-9A-Fa-f]{6})\/position$/);
+    if (!m) return;
+    if (!isFinite(d.lat) || !isFinite(d.lon)) return;
+    if (Math.abs(d.lat) > 90 || Math.abs(d.lon) > 180) return;
+
+    var hex = m[1].toUpperCase();
+    var a = craft.get(hex) || { trail: [] };
+    a.lat = d.lat; a.lon = d.lon;
+    a.alt = isFinite(d.altitude_ft) ? d.altitude_ft : a.alt;
+    var cs = typeof d.callsign === "string" ? d.callsign.trim().toUpperCase() : "";
+    if (/^[A-Z0-9 -]{1,8}$/.test(cs)) a.cs = cs;
+    a.seen = Date.now();
+
+    var p = project(a.lat, a.lon);
+    if (p.km <= VIEW_KM) {
+      var pt = toPx(p);
+      a.trail.push(pt);
+      if (a.trail.length > TRAIL_N) a.trail.shift();
+      ping(pt);
+    }
+    craft.set(hex, a);
+    pingTimes.push(Date.now());
+  });
+
+  // Repaint on a timer rather than per message: ages, fades and the table all
+  // need to advance even when nothing arrives, and 1090 MHz is chatty.
+  render();
+  setInterval(render, 1000);
+})();
+</script>
+</body>
+</html>

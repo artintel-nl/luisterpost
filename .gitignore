@@ -1,5 +1,12 @@
 # internal planning docs — never publish
 PUBLISHING-PLAN.md
+DATA-PIPELINE.md
+
+# The publisher is a good candidate to publish eventually — it's the most interesting
+# part of the architecture and proves exactly what does and doesn't leave the house.
+# Held back until Frank reads it: the comments name household appliances on the broker
+# (washing machine, dryer, IronMan, desk lamp, alarm) and the private topic layout.
+publisher/
 .resume_task.md
 .claude/
 
