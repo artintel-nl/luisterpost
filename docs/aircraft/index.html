@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aircraft — Luisterpost</title>
+<title>Planes — ADS-B — Luisterpost</title>
 <meta name="description" content="Live 1090 MHz ADS-B reception at the Luisterpost listening post in Utrecht: every aircraft transponder heard overhead, plotted by range and bearing from the station.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -64,6 +64,7 @@ header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
 .eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:block}
 .pagehead h1{font-weight:700;font-size:clamp(28px,4.6vw,42px);letter-spacing:-.015em;line-height:1.08}
 .pagehead .thesis{margin-top:12px;font-size:16px;line-height:1.5;max-width:34em;color:var(--muted)}
+.pagehead .thesis abbr{text-decoration:underline dotted;cursor:help}
 .tick-radio{display:block;height:5px;width:64px;background:var(--oxide);margin-bottom:16px}
 
 /* ---------- readout strip ---------- */
@@ -139,9 +140,9 @@ footer a{color:var(--signal);text-decoration:none}
 
   <section class="pagehead">
     <span class="tick-radio" aria-hidden="true"></span>
-    <span class="eyebrow">Channel 04 · Radio 1090 MHz · from-scratch decoder</span>
+    <span class="eyebrow">Channel 01 · ADS-B · Radio 1090 MHz · from-scratch decoder</span>
     <h1>Everything overhead, right now</h1>
-    <p class="thesis">Every aircraft within reception range broadcasts its position twice a second on 1090 MHz. The station listens and decodes them. Nothing here is requested — it is simply what arrives.</p>
+    <p class="thesis">Every aircraft within reception range broadcasts its position twice a second on 1090 MHz — <abbr title="Automatic Dependent Surveillance–Broadcast">ADS-B</abbr>. The station listens and decodes it with a from-scratch decoder. Nothing here is requested; it is simply what arrives.</p>
   </section>
 
   <dl class="readout">
@@ -153,7 +154,7 @@ footer a{color:var(--signal);text-decoration:none}
 
   <section class="plotcard">
     <div class="card-head">
-      <span>Range &amp; bearing from the station</span>
+      <span>ADS-B contacts · range &amp; bearing from the station</span>
       <span id="scope-scale">120 km radius</span>
     </div>
     <div class="plotwrap">

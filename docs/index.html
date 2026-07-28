@@ -54,7 +54,12 @@ header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
 .hdr nav a{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-dark);text-decoration:none}
 .hdr nav a:hover{color:var(--ink-inverse)}
 .hdr .live{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--signal)}
-.hdr .live i{width:7px;height:7px;border-radius:50%;background:var(--signal)}
+.hdr .live i{width:7px;height:7px;border-radius:50%;background:var(--signal);flex:none}
+.hdr .live.is-idle{color:var(--muted-dark)}
+.hdr .live.is-idle i{background:var(--muted-dark)}
+.hdr .live.is-up i{animation:beat 2s ease-in-out infinite}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.hdr .live.is-up i{animation:none}}
 @media (max-width:700px){.hdr nav{display:none}}
 
 /* ---------- hero ---------- */
@@ -76,7 +81,9 @@ header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
 .bands{display:grid;grid-template-columns:repeat(4,1fr)}
 .band{padding:18px 14px 22px;border-right:1px solid var(--rule);text-decoration:none;color:var(--ink)}
 .band:last-child{border-right:none}
-.band:hover{background:var(--paper-sunk)}
+a.band:hover{background:var(--paper-sunk)}
+.band-soon{color:var(--muted)}
+.band-soon:hover{background:none}
 .band .tick{display:block;height:5px;margin-bottom:14px}
 .t-sound{background:var(--slate)}
 .t-radio{background:var(--oxide)}
@@ -142,7 +149,7 @@ footer a{color:var(--signal);text-decoration:none}
     <nav aria-label="Live channels">
       <a href="/aircraft/">Planes</a>
     </nav>
-    <span class="live mono"><i aria-hidden="true"></i>7 RECEIVERS UP</span>
+    <span class="live mono is-idle" id="rx"><i aria-hidden="true"></i><span id="rx-txt">7 RECEIVERS</span></span>
   </div>
 </header>
 
@@ -171,35 +178,35 @@ footer a{color:var(--signal);text-decoration:none}
   </section>
 
   <section class="chart" aria-label="The four bands the station receives on">
-    <div class="chart-head"><span>Receiving bands</span><span>4 media · 11 channels</span></div>
+    <div class="chart-head"><span>Receiving bands</span><span>4 media · 1 live channel</span></div>
     <div class="bands">
-      <a class="band" href="#ch01">
+      <div class="band">
         <span class="tick t-sound" aria-hidden="true"></span>
         <h2>Sound</h2><span class="nl">geluid</span>
         <p class="range mono">20 HZ – 120 KHZ</p>
         <p class="what">Pressure waves: the dawn chorus, and above human hearing, the bats.</p>
-      </a>
-      <a class="band" href="#ch04">
+      </div>
+      <a class="band" href="#ch01">
         <span class="tick t-radio" aria-hidden="true"></span>
         <h2>Radio</h2><span class="nl">radio</span>
         <p class="range mono">500 KHZ – 2.4 GHZ</p>
         <p class="what">Lightning sferics, ship and aircraft transponders, drone beacons.</p>
       </a>
-      <a class="band" href="#ch09">
+      <div class="band band-soon">
         <span class="tick t-light" aria-hidden="true"></span>
         <h2>Light</h2><span class="nl">licht</span>
         <p class="range mono">905 NM</p>
-        <p class="what">Near-infrared laser backscatter off dust and pollen. Planned.</p>
-      </a>
-      <a class="band" href="#ch08">
+        <p class="what">Near-infrared laser backscatter off dust and pollen. Not yet built.</p>
+      </div>
+      <div class="band">
         <span class="tick t-gamma" aria-hidden="true"></span>
         <h2>Gamma</h2><span class="nl">gamma</span>
         <p class="range mono">0.05 – 3 MEV</p>
         <p class="what">Ionizing radiation: cosmic rays, radon washout, the background itself.</p>
-      </a>
+      </div>
     </div>
   </section>
-  <p class="chart-note">The station receives on four physical media. Every instrument below is a channel on one of these bands.</p>
+  <p class="chart-note">The station receives on four physical media. One channel is published live so far — the rest of the instruments report into the station’s own logs.</p>
 
   <section class="prose">
     <p>A luisterpost is what the Dutch military called a signals intercept station — a room full of receivers, pointed at whatever was passing through the air. This one is not on a border or a hilltop. It is an ordinary house in Utrecht, fitted over the years with microphones, antennas, particle detectors and weather instruments, all reporting into one small MQTT broker in the meter cupboard.</p>
@@ -211,79 +218,9 @@ footer a{color:var(--signal);text-decoration:none}
 
     <div class="channel" id="ch01">
       <span class="ch mono">CH 01</span>
-      <div><h3>Birds</h3><p class="desc">BirdNET acoustic species detection — an EM272 microphone in a DIY weatherproof housing, classified on a Raspberry Pi 4.</p></div>
-      <span class="medium mono md-sound">Sound 2–10 kHz</span>
-      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
-    </div>
-
-    <div class="channel" id="ch02">
-      <span class="ch mono">CH 02</span>
-      <div><h3>Weather</h3><p class="desc">Greenhouse-mounted station: temperature, humidity, pressure, wind, rain — and an AS3935 lightning detector listening for sferics.</p></div>
-      <span class="medium mono md-mixed">Mixed · RF 500 kHz</span>
-      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
-    </div>
-
-    <div class="channel" id="ch03">
-      <span class="ch mono">CH 03</span>
-      <div><h3>Air quality</h3><p class="desc">CO₂, PM2.5, temperature and humidity, logged continuously — over 170 days of data and counting.</p></div>
-      <span class="medium mono md-mixed">Particle count</span>
-      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
-    </div>
-
-    <div class="channel" id="ch04">
-      <span class="ch mono">CH 04</span>
-      <div><h3>Aircraft — ADS-B</h3><p class="desc">Transponder decoding at 1090 MHz with a from-scratch decoder, plus an enrichment pipeline for routes and aircraft types. <a href="/aircraft/">See what is overhead right now →</a></p></div>
+      <div><h3>Planes — ADS-B</h3><p class="desc">Transponder decoding at 1090 MHz with a from-scratch decoder, plus an enrichment pipeline for routes and aircraft types. <a href="/aircraft/">See what is overhead right now →</a></p></div>
       <span class="medium mono md-radio">Radio 1090 MHz</span>
       <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
-    </div>
-
-    <div class="channel" id="ch05">
-      <span class="ch mono">CH 05</span>
-      <div><h3>Drones — Remote-ID</h3><p class="desc">EU/ASTM Remote ID receiver on two ESP32-S3 boards — WiFi and Bluetooth beacons from drones overhead. Published as aggregate counts only.</p></div>
-      <span class="medium mono md-radio">Radio 2.4 GHz</span>
-      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
-    </div>
-
-    <div class="channel" id="ch06">
-      <span class="ch mono">CH 06</span>
-      <div><h3>Power</h3><p class="desc">Station telemetry: a two-channel INA219 DC power node keeping the books on what the instruments themselves consume.</p></div>
-      <span class="medium mono md-mixed">Telemetry</span>
-      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
-    </div>
-
-    <div class="channel" id="ch08">
-      <span class="ch mono">CH 08</span>
-      <div><h3>Radiation — Radiacode</h3><p class="desc">Gamma background monitor — a Radiacode 110 scintillation detector on an ESP32-P4 bridge, logging dose rate and daily energy spectra.</p></div>
-      <span class="medium mono md-gamma">Gamma 0.05–3 MeV</span>
-      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
-    </div>
-
-    <div class="channel" id="ch07">
-      <span class="ch mono">CH 07</span>
-      <div><h3>Bats</h3><p class="desc">Ultrasonic detection of the evening shift: species and activity from echolocation calls above the garden.</p></div>
-      <span class="medium mono md-sound">Sound 20–120 kHz</span>
-      <span class="status mono s-plan"><i aria-hidden="true"></i>PLANNED</span>
-    </div>
-
-    <div class="channel" id="ch09">
-      <span class="ch mono">CH 09</span>
-      <div><h3>Aerosol lidar</h3><p class="desc">A passive 905 nm experiment: listening to laser backscatter to profile dust and pollen above the garden.</p></div>
-      <span class="medium mono md-light">Light 905 nm</span>
-      <span class="status mono s-plan"><i aria-hidden="true"></i>PLANNED</span>
-    </div>
-
-    <div class="channel" id="ch10">
-      <span class="ch mono">CH 10</span>
-      <div><h3>Ships — AIS</h3><p class="desc">Marine transponders at 162 MHz — barge traffic on the Amsterdam-Rijnkanaal, a few kilometres east.</p></div>
-      <span class="medium mono md-radio">Radio 162 MHz</span>
-      <span class="status mono s-plan"><i aria-hidden="true"></i>PLANNED</span>
-    </div>
-
-    <div class="channel" id="ch11">
-      <span class="ch mono">CH 11</span>
-      <div><h3>Pollen</h3><p class="desc">Counting what the air carries in spring: a DIY optical pollen counter, still on the drawing board.</p></div>
-      <span class="medium mono md-light">Particle count</span>
-      <span class="status mono s-plan"><i aria-hidden="true"></i>PLANNED</span>
     </div>
   </section>
 
@@ -302,5 +239,39 @@ footer a{color:var(--signal);text-decoration:none}
   </div>
 </footer>
 
+
+<!-- Live receiver count. Pinned + Subresource Integrity, same as the Planes page. -->
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"
+        integrity="sha384-u4uqeACkFcoKl57rBQJHVGDd1pqhW4w8X3WjTu1ZksPdxoLqdt34jpoNkJisE25W"
+        crossorigin="anonymous" defer></script>
+<script>
+// The header used to hard-code "7 RECEIVERS UP", which was a claim the page could not
+// back up. It now reports what the station actually says. Until the feed answers it
+// states the count only, and makes no claim about anything being up.
+window.addEventListener("load", function () {
+  if (typeof mqtt === "undefined") return;          // CDN blocked: keep the static text
+  var el = document.getElementById("rx");
+  var txt = document.getElementById("rx-txt");
+
+  var c = mqtt.connect("wss://live.luisterpost.io/", {
+    clientId: "luisterpost-site-" + Math.random().toString(16).slice(2, 10),
+    keepalive: 45, reconnectPeriod: 15000, clean: true
+  });
+
+  c.on("connect", function () { c.subscribe("luisterpost/station/receivers"); });
+  c.on("close", function () { el.className = "live mono is-idle"; });
+  c.on("error", function () { el.className = "live mono is-idle"; });
+
+  c.on("message", function (topic, payload) {
+    var d;
+    try { d = JSON.parse(payload.toString()); } catch (e) { return; }
+    if (typeof d.up !== "number" || typeof d.total !== "number") return;
+    el.className = "live mono " + (d.up > 0 ? "is-up" : "is-idle");
+    txt.textContent = d.up === d.total
+      ? d.up + " RECEIVERS UP"
+      : d.up + " OF " + d.total + " RECEIVERS UP";
+  });
+});
+</script>
 </body>
 </html>
