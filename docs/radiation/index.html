@@ -301,11 +301,31 @@ footer a{color:var(--signal);text-decoration:none}
     potassium line, far wider than one channel, so nothing real is lost. The analyser's final
     overflow channel is present in the data but not drawn.</p>
 
-    <p>The detector's gain drifts, mostly with temperature, which would slide the whole
-    energy axis back and forth over a day. Potassium-40 is the reference: it is in every
-    building, its line sits at a known 1460.8&nbsp;keV, and it is the strongest identifiable
-    feature here. The station finds where that line actually landed and rescales the axis to
-    match — the correction currently applied is shown above the spectrum.</p>
+    <p><b>Temperature compensation.</b> A scintillator's gain depends on temperature. As the
+    house warms and cools the same photon produces a slightly different pulse height, so it
+    lands in a different channel — the whole energy axis slides back and forth over a day, and
+    the named lines drift off their markers. Nothing about the radiation has changed; only the
+    ruler has.</p>
+
+    <p>Potassium-40 is the ruler's fixed mark. It is in every building — concrete, brick, soil
+    — its line sits at a known <b>1460.8&nbsp;keV</b>, and it is the strongest identifiable
+    feature in an ordinary background spectrum. So the station measures where that line
+    actually landed and rescales the axis until it sits where it belongs:</p>
+
+    <p style="margin-top:.5em">The continuum under the peak is estimated by averaging two side
+    bands, 1300–1360&nbsp;keV below and 1560–1620&nbsp;keV above, and interpolating linearly
+    between them. That continuum is subtracted across the 1380–1545&nbsp;keV window, and the
+    centroid of what is left — the counts belonging to the peak itself — is the measured line
+    position. The whole axis is then multiplied by 1460.8 divided by that centroid. A factor of
+    ×1.006 means the detector was reading about 0.6% low.</p>
+
+    <p style="margin-top:.5em">Two guards. The fit runs on the accumulated sum, never a single
+    hour: one hour holds only a handful of counts at 1461&nbsp;keV and the centroid would be
+    noise. And it refuses to lock at all below 100 net counts in the peak, or if the centroid
+    lands outside 1400–1530&nbsp;keV, which would mean the fit had found something that is not
+    potassium. When it declines, the line above the spectrum says <em>pending</em> and the
+    uncorrected axis is used — the station would rather show you a drifting ruler than a
+    confident wrong one.</p>
 
     <p>Dose rate is what the instrument reports, not a measurement of anyone's exposure.
     A scintillation detector on a shelf indoors is not a personal dosimeter, and short
