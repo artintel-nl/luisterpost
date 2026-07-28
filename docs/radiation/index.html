@@ -104,6 +104,11 @@ svg.trace{display:block;width:100%;height:auto}
 .line{fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
 .head-dot{fill:var(--signal);stroke:var(--paper);stroke-width:2}
 .crosshair{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:0}
+.spec-line{fill:none;stroke:var(--ink);stroke-width:1.4;stroke-linejoin:round}
+.spec-mark{stroke:var(--oxide);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
+.spec-mark-lbl{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.08em;fill:var(--oxide)}
+.spec-cap{padding:4px 16px 18px;font-size:13px;color:var(--muted);line-height:1.6;max-width:60em}
+.spec-cap b{color:var(--ink);font-weight:600}
 .chart-empty{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;fill:var(--muted);text-anchor:middle}
 .tip{position:absolute;pointer-events:none;background:var(--tile);color:var(--ink-inverse);padding:9px 11px;font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.6;white-space:nowrap;opacity:0;transition:opacity 120ms ease;z-index:5}
 .tip.on{opacity:1}
@@ -192,6 +197,27 @@ footer a{color:var(--signal);text-decoration:none}
   </section>
 
   <section class="card">
+    <div class="card-head">
+      <span>Energy spectrum · <span class="unit">keV</span></span>
+      <span id="spec-note">accumulating…</span>
+    </div>
+    <div class="chartwrap">
+      <svg class="trace" id="spec" viewBox="0 0 900 330" role="img"
+           aria-label="Gamma energy spectrum: counts against photon energy in keV on a logarithmic scale, with the potassium-40, bismuth-214, lead-214 and thallium-208 background lines marked.">
+        <g id="s-grid"></g>
+        <g id="s-lines"></g>
+        <path id="s-path" class="spec-line"></path>
+        <text id="s-empty" class="chart-empty" x="470" y="150">Waiting for the first hourly spectrum…</text>
+      </svg>
+    </div>
+    <p class="spec-cap">Every gamma photon the detector absorbs is sorted by its energy. The
+    bumps are fingerprints: <b>potassium-40</b> at 1461&nbsp;keV comes from the potassium in
+    concrete, brick and soil — and in bananas. <b>Lead-214</b> and <b>bismuth-214</b> are radon
+    daughters, drifting in from the ground. <b>Thallium-208</b> belongs to the thorium series.
+    Nothing here is unusual; it is what every building quietly contains.</p>
+  </section>
+
+  <section class="card">
     <div class="card-head"><span>Hourly summary</span><span>mean · low · high</span></div>
     <div class="tbl-scroll">
       <table>
@@ -217,6 +243,12 @@ footer a{color:var(--signal);text-decoration:none}
     three-hour trace is published as one-minute means on
     <code>luisterpost/radiation/history</code> so a page opened just now still has
     something to show.</p>
+    <p>The spectrum is the sum of the last 24 hourly frames, published on
+    <code>luisterpost/radiation/spectrum</code> with its accumulated live time. Channels are
+    grouped in fours for the chart — this detector resolves roughly 70&nbsp;keV at the
+    potassium line, far wider than one channel, so nothing real is lost. The analyser's final
+    overflow channel is present in the data but not drawn.</p>
+
     <p>Dose rate is what the instrument reports, not a measurement of anyone's exposure.
     A scintillation detector on a shelf indoors is not a personal dosimeter, and short
     excursions are normal — rain washes radon daughters out of the air and the trace
@@ -251,7 +283,8 @@ footer a{color:var(--signal);text-decoration:none}
   var els = {};
   ["c-grid","c-band","c-spread","c-line","c-head","c-cross","c-hit","c-empty",
    "tip","tbody","tbl-empty","dose","verdict","verdict-txt","conn","conn-txt",
-   "r-cps","r-mean","r-min","r-max","chart-note"]
+   "r-cps","r-mean","r-min","r-max","chart-note",
+   "s-grid","s-lines","s-path","s-empty","spec-note"]
     .forEach(function (id) { els[id] = document.getElementById(id); });
 
   function svg(tag, attrs) {
@@ -405,6 +438,106 @@ footer a{color:var(--signal);text-decoration:none}
     els["c-cross"].style.opacity = 0;
   });
 
+
+  // ---- energy spectrum ------------------------------------------------------
+  // Counts span orders of magnitude, so the y axis is logarithmic — the standard
+  // way to read a spectrum, and the only way the high-energy lines are visible at
+  // all next to the low-energy bulk.
+  //
+  // Channels are summed in groups of four for display. That discards nothing real:
+  // this detector's energy resolution is on the order of 7% FWHM, which at 1461 keV
+  // is roughly 70 keV — about 25 channels. One channel was never independently
+  // meaningful, and grouping lifts sparse high-energy bins out of the floor.
+  var REBIN = 4;
+  var SW = 900, SH = 330, SL = 58, SR = 16, ST = 26, SB = 44;
+  var SPW = SW - SL - SR, SPH = SH - ST - SB;
+
+  // Background lines worth naming. Energies are the standard emission lines.
+  var LINES = [
+    { kev: 351.9,  label: "Pb-214" },
+    { kev: 609.3,  label: "Bi-214" },
+    { kev: 1460.8, label: "K-40"   },
+    { kev: 2614.5, label: "Tl-208" }
+  ];
+
+  function renderSpectrum(d) {
+    var cts = d.counts, cal = d.calib;
+    if (!Array.isArray(cts) || !Array.isArray(cal) || cal.length < 2) return;
+    var E = function (i) {
+      return cal[0] + cal[1] * i + (cal.length > 2 ? cal[2] * i * i : 0);
+    };
+
+    // The final channel is the analyser's overflow bin: everything above the top of
+    // the range lands there, so it always stands as a tall spike at the right edge.
+    // Measured 2026-07-28 it held 190 counts behind eleven empty channels. Plotted
+    // as-is it reads as a strong 2.8 MeV line, which would be simply wrong. The raw
+    // array on the MQTT topic keeps it; the chart does not draw it.
+    var n = cts.length - 1;
+
+    var bins = [];
+    for (var i = 0; i < n; i += REBIN) {
+      var sum = 0;
+      for (var j = i; j < Math.min(i + REBIN, n); j++) sum += cts[j];
+      bins.push([E(i + REBIN / 2), sum]);
+    }
+    var eMax = E(n - 1);
+    var cMax = Math.max.apply(null, bins.map(function (b) { return b[1]; }));
+    if (!(cMax > 0)) return;
+
+    var yTop = Math.pow(10, Math.ceil(Math.log10(cMax)));
+    var yBot = 0.5;                        // zero counts sit on the floor
+    var lg = Math.log10;
+    var SX = function (e) { return SL + e / eMax * SPW; };
+    var SY = function (v) {
+      return ST + SPH - (lg(Math.max(v, yBot)) - lg(yBot)) / (lg(yTop) - lg(yBot)) * SPH;
+    };
+
+    var g = els["s-grid"];
+    g.textContent = "";
+    for (var p10 = yBot; p10 <= yTop; p10 *= 10) {
+      var y = SY(p10);
+      g.appendChild(svg("line", { class: "gridline", x1: SL, x2: SL + SPW, y1: y, y2: y }));
+      var yl = svg("text", { class: "axis-lbl", x: SL - 8, y: y + 3, "text-anchor": "end" });
+      yl.textContent = p10 < 1 ? "0" : String(p10);
+      g.appendChild(yl);
+    }
+    for (var e = 0; e <= eMax; e += 500) {
+      var x = SX(e);
+      g.appendChild(svg("line", { class: "gridline", x1: x, x2: x, y1: ST, y2: ST + SPH }));
+      var xl = svg("text", { class: "axis-lbl", x: x, y: ST + SPH + 18, "text-anchor": "middle" });
+      xl.textContent = e;
+      g.appendChild(xl);
+    }
+    var cl = svg("text", { class: "axis-lbl", x: SL + SPW, y: ST + SPH + 34, "text-anchor": "end" });
+    cl.textContent = "photon energy keV";
+    g.appendChild(cl);
+    var ct = svg("text", { class: "axis-lbl", x: SL - 8, y: ST - 8, "text-anchor": "end" });
+    ct.textContent = "counts";
+    g.appendChild(ct);
+
+    // named background lines
+    var lg2 = els["s-lines"];
+    lg2.textContent = "";
+    LINES.forEach(function (L) {
+      if (L.kev > eMax) return;
+      var x = SX(L.kev);
+      lg2.appendChild(svg("line", { class: "spec-mark", x1: x, x2: x, y1: ST + 6, y2: ST + SPH }));
+      var lbl = svg("text", { class: "spec-mark-lbl", x: x, y: ST - 0, "text-anchor": "middle" });
+      lbl.textContent = L.label;
+      lg2.appendChild(lbl);
+    });
+
+    els["s-path"].setAttribute("d", "M" + bins.map(function (b) {
+      return SX(b[0]).toFixed(1) + " " + SY(b[1]).toFixed(1);
+    }).join(" L"));
+    els["s-empty"].style.display = "none";
+
+    var hours = (d.live_time_s || 0) / 3600;
+    els["spec-note"].textContent =
+      hours.toFixed(1) + " h accumulated · " + sumAll(cts).toLocaleString("en") + " counts";
+  }
+  function sumAll(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s; }
+
   // ---- live ----------------------------------------------------------------
   function setConn(state, text) {
     els.conn.className = "live mono " + state;
@@ -427,6 +560,7 @@ footer a{color:var(--signal);text-decoration:none}
     setConn("is-live", "RECEIVING");
     client.subscribe("luisterpost/radiation/realtime");
     client.subscribe("luisterpost/radiation/history");
+    client.subscribe("luisterpost/radiation/spectrum");
     client.subscribe("luisterpost/radiation/status");
     client.subscribe("luisterpost/station/status");
   });
@@ -444,6 +578,10 @@ footer a{color:var(--signal);text-decoration:none}
         return Array.isArray(p) && p.length >= 4 && p.every(function (v) { return isFinite(v); });
       });
       render();
+      return;
+    }
+    if (topic === "luisterpost/radiation/spectrum") {
+      try { renderSpectrum(d); } catch (e) { /* malformed frame: leave the last one up */ }
       return;
     }
     if (topic === "luisterpost/radiation/realtime") {
