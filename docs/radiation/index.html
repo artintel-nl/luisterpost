@@ -107,6 +107,14 @@ svg.trace{display:block;width:100%;height:auto}
 .spec-line{fill:none;stroke:var(--ink);stroke-width:1.4;stroke-linejoin:round}
 .spec-mark{stroke:var(--oxide);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
 .spec-mark-lbl{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.08em;fill:var(--oxide)}
+.wf-wrap{padding:14px 16px 16px}
+.wf-rows{display:flex;gap:10px;align-items:flex-start}
+.wf-rows canvas{flex:1 1 auto;width:100%;display:block;image-rendering:pixelated;border:1px solid var(--rule)}
+.wf-times{flex:none;display:flex;flex-direction:column;font-size:9.5px;letter-spacing:.06em;color:var(--muted);order:-1;text-align:right}
+.wf-times span{display:block;height:14px;line-height:14px}
+.wf-axis{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.1em;color:var(--muted);margin-top:6px;padding-left:44px}
+.wf-legend{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.wf-scale{display:inline-block;width:180px;height:9px;border:1px solid var(--rule)}
 .spec-cap{padding:4px 16px 18px;font-size:13px;color:var(--muted);line-height:1.6;max-width:60em}
 .spec-cap b{color:var(--ink);font-weight:600}
 .chart-empty{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;fill:var(--muted);text-anchor:middle}
@@ -218,6 +226,29 @@ footer a{color:var(--signal);text-decoration:none}
   </section>
 
   <section class="card">
+    <div class="card-head">
+      <span>Spectrum over time · waterfall</span>
+      <span id="wf-note">accumulating…</span>
+    </div>
+    <div class="wf-wrap">
+      <div class="wf-rows">
+        <canvas id="wf" width="1020" height="336" aria-label="Waterfall: each row is one hour of gamma spectrum, most recent at the top. Horizontal position is photon energy, darkness is counts. The hourly figures are in the summary table below."></canvas>
+        <div class="wf-times mono" id="wf-times" aria-hidden="true"></div>
+      </div>
+      <div class="wf-axis mono" id="wf-axis" aria-hidden="true"></div>
+      <div class="wf-legend mono">
+        <span>counts</span>
+        <span class="wf-scale" id="wf-scale"></span>
+        <span id="wf-scale-max">—</span>
+      </div>
+    </div>
+    <p class="spec-cap">The same spectrum, one row per hour, newest on top. A steady house shows
+    steady bands. When rain washes radon daughters out of the air, the <b>Pb-214</b> and
+    <b>Bi-214</b> region darkens for a few hours and then fades — an event the 24-hour sum
+    above averages away entirely.</p>
+  </section>
+
+  <section class="card">
     <div class="card-head"><span>Hourly summary</span><span>mean · low · high</span></div>
     <div class="tbl-scroll">
       <table>
@@ -284,7 +315,8 @@ footer a{color:var(--signal);text-decoration:none}
   ["c-grid","c-band","c-spread","c-line","c-head","c-cross","c-hit","c-empty",
    "tip","tbody","tbl-empty","dose","verdict","verdict-txt","conn","conn-txt",
    "r-cps","r-mean","r-min","r-max","chart-note",
-   "s-grid","s-lines","s-path","s-empty","spec-note"]
+   "s-grid","s-lines","s-path","s-empty","spec-note",
+   "wf","wf-times","wf-axis","wf-scale","wf-scale-max","wf-note"]
     .forEach(function (id) { els[id] = document.getElementById(id); });
 
   function svg(tag, attrs) {
@@ -538,6 +570,83 @@ footer a{color:var(--signal);text-decoration:none}
   }
   function sumAll(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s; }
 
+
+  // ---- waterfall ------------------------------------------------------------
+  // One row per hourly frame, newest at the top; horizontal position is energy,
+  // darkness is counts. Sequential single-hue ramp, light to dark — validated
+  // monotonic in relative luminance so the reading order is unambiguous.
+  var WF_RAMP = ["#f6efe6","#eed3c2","#e0ab8d","#cf7b57","#c2543a","#8f3722","#521e12"];
+  var WF_ROWS = 24, WF_ROW_H = 14;
+
+  function rampColor(f) {                     // f in 0..1
+    if (!(f > 0)) return WF_RAMP[0];
+    var x = Math.min(1, f) * (WF_RAMP.length - 1);
+    return WF_RAMP[Math.round(x)];
+  }
+
+  function renderWaterfall(d) {
+    var frames = d.frames, cal = d.calib, rb = d.rebin || 4;
+    if (!Array.isArray(frames) || !frames.length || !Array.isArray(cal)) return;
+    var cv = els.wf, ctx = cv.getContext("2d");
+    var nb = frames[0].counts.length;
+    // Size to the rows we actually have, so the panel grows through the day rather
+    // than reserving a day's worth of blank paper on the first hour. Height is set
+    // explicitly because the canvas is stretched to full width and would otherwise
+    // scale its height to match, turning 24 rows into a very tall image.
+    var shown = Math.min(frames.length, WF_ROWS);
+    cv.width = nb; cv.height = shown * WF_ROW_H;
+    cv.style.height = (shown * WF_ROW_H) + "px";
+    ctx.clearRect(0, 0, cv.width, cv.height);
+
+    // Counts span orders of magnitude, so the ramp is applied on a log scale —
+    // a linear one would paint everything except the low-energy bulk as blank.
+    var peak = 0;
+    frames.forEach(function (f) {
+      f.counts.forEach(function (v) { if (v > peak) peak = v; });
+    });
+    if (peak <= 0) return;
+    var lp = Math.log10(peak + 1);
+
+    // newest first
+    var ordered = frames.slice().sort(function (a, b) { return b.t - a.t; });
+    ordered.slice(0, WF_ROWS).forEach(function (f, row) {
+      for (var i = 0; i < f.counts.length; i++) {
+        ctx.fillStyle = rampColor(Math.log10(f.counts[i] + 1) / lp);
+        ctx.fillRect(i, row * WF_ROW_H, 1, WF_ROW_H);
+      }
+    });
+
+    // row clock labels
+    var tl = els["wf-times"];
+    tl.textContent = "";
+    ordered.slice(0, WF_ROWS).forEach(function (f) {
+      var s = document.createElement("span");
+      var dt = new Date(f.t * 1000);
+      s.textContent = String(dt.getHours()).padStart(2, "0") + ":" +
+                      String(dt.getMinutes()).padStart(2, "0");
+      tl.appendChild(s);
+    });
+
+    // energy axis under the canvas
+    var E = function (i) {
+      var ch = i * rb;
+      return cal[0] + cal[1] * ch + (cal.length > 2 ? cal[2] * ch * ch : 0);
+    };
+    var ax = els["wf-axis"];
+    ax.textContent = "";
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (fr) {
+      var s = document.createElement("span");
+      s.textContent = Math.round(E(Math.floor(fr * (nb - 1)))) + (fr === 1 ? " keV" : "");
+      ax.appendChild(s);
+    });
+
+    els["wf-scale"].style.background =
+      "linear-gradient(90deg," + WF_RAMP.join(",") + ")";
+    els["wf-scale-max"].textContent = "0 – " + peak.toLocaleString("en") + " per hour";
+    els["wf-note"].textContent = frames.length +
+      (frames.length === 1 ? " hour" : " hours") + " of " + WF_ROWS;
+  }
+
   // ---- live ----------------------------------------------------------------
   function setConn(state, text) {
     els.conn.className = "live mono " + state;
@@ -561,6 +670,7 @@ footer a{color:var(--signal);text-decoration:none}
     client.subscribe("luisterpost/radiation/realtime");
     client.subscribe("luisterpost/radiation/history");
     client.subscribe("luisterpost/radiation/spectrum");
+    client.subscribe("luisterpost/radiation/waterfall");
     client.subscribe("luisterpost/radiation/status");
     client.subscribe("luisterpost/station/status");
   });
@@ -578,6 +688,10 @@ footer a{color:var(--signal);text-decoration:none}
         return Array.isArray(p) && p.length >= 4 && p.every(function (v) { return isFinite(v); });
       });
       render();
+      return;
+    }
+    if (topic === "luisterpost/radiation/waterfall") {
+      try { renderWaterfall(d); } catch (e) { /* keep the last good render */ }
       return;
     }
     if (topic === "luisterpost/radiation/spectrum") {
