@@ -106,7 +106,9 @@ svg.trace{display:block;width:100%;height:auto}
 .baseline{stroke:var(--oxide);stroke-width:1.4;stroke-dasharray:6 4}
 .baseline-lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;fill:var(--oxide)}
 .crosshair{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:0}
-.spec-line{fill:none;stroke:var(--ink);stroke-width:1.4;stroke-linejoin:round}
+.spec-line{fill:none;stroke:var(--oxide);stroke-width:1.6;stroke-linejoin:round}
+.spec-latest{fill:none;stroke:#1f6f9c;stroke-width:1;stroke-linejoin:round;opacity:.9}
+.spec-key{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em}
 .spec-mark{stroke:var(--oxide);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
 .spec-mark-lbl{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.08em;fill:var(--oxide)}
 .wf-wrap{padding:14px 16px 16px}
@@ -212,7 +214,7 @@ footer a{color:var(--signal);text-decoration:none}
 
   <section class="card">
     <div class="card-head">
-      <span>Mean energy spectrum · <span class="unit">keV</span></span>
+      <span>Energy spectrum · <span class="unit">keV</span></span>
       <span id="spec-note">accumulating…</span>
     </div>
     <div class="chartwrap">
@@ -220,10 +222,13 @@ footer a{color:var(--signal);text-decoration:none}
            aria-label="Gamma energy spectrum: counts against photon energy in keV on a logarithmic scale, with the potassium-40, bismuth-214, lead-214 and thallium-208 background lines marked.">
         <g id="s-grid"></g>
         <g id="s-lines"></g>
+        <path id="s-latest" class="spec-latest"></path>
         <path id="s-path" class="spec-line"></path>
+        <g id="s-key"></g>
         <text id="s-empty" class="chart-empty" x="470" y="150">Waiting for the first hourly spectrum…</text>
       </svg>
     </div>
+    <p class="spec-cap mono" id="k40-lock" style="text-transform:none;font-size:11px;letter-spacing:.08em;padding-bottom:0">K-40 lock: pending</p>
     <p class="spec-cap">Every gamma photon the detector absorbs is sorted by its energy. The
     bumps are fingerprints: <b>potassium-40</b> at 1461&nbsp;keV comes from the potassium in
     concrete, brick and soil — and in bananas. <b>Lead-214</b> and <b>bismuth-214</b> are radon
@@ -296,6 +301,12 @@ footer a{color:var(--signal);text-decoration:none}
     potassium line, far wider than one channel, so nothing real is lost. The analyser's final
     overflow channel is present in the data but not drawn.</p>
 
+    <p>The detector's gain drifts, mostly with temperature, which would slide the whole
+    energy axis back and forth over a day. Potassium-40 is the reference: it is in every
+    building, its line sits at a known 1460.8&nbsp;keV, and it is the strongest identifiable
+    feature here. The station finds where that line actually landed and rescales the axis to
+    match — the correction currently applied is shown above the spectrum.</p>
+
     <p>Dose rate is what the instrument reports, not a measurement of anyone's exposure.
     A scintillation detector on a shelf indoors is not a personal dosimeter, and short
     excursions are normal — rain washes radon daughters out of the air and the trace
@@ -332,7 +343,7 @@ footer a{color:var(--signal);text-decoration:none}
   ["c-grid","c-band","c-spread","c-line","c-head","c-cross","c-hit","c-empty",
    "tip","tbody","tbl-empty","dose","verdict","verdict-txt","conn","conn-txt",
    "r-cps","r-mean","r-min","r-max","chart-note",
-   "s-grid","s-lines","s-path","s-empty","spec-note","c-base",
+   "s-grid","s-lines","s-path","s-empty","spec-note","c-base","s-latest","s-key",
    "wf","wf-times","wf-axis","wf-scale","wf-scale-max","wf-note",
    "wf-of","wf-of-rate"]
     .forEach(function (id) { els[id] = document.getElementById(id); });
@@ -341,6 +352,9 @@ footer a{color:var(--signal);text-decoration:none}
     var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
     for (var k in attrs) e.setAttribute(k, attrs[k]);
     return e;
+  }
+  function hoursLabel(h) {
+    return h >= 48 ? Math.round(h / 24) + "-day" : Math.round(h) + "-hour";
   }
   function fmt(v, dp) { return v == null ? "—" : v.toFixed(dp == null ? 3 : dp); }
 
@@ -534,8 +548,14 @@ footer a{color:var(--signal);text-decoration:none}
   function renderSpectrum(d) {
     var cts = d.counts, cal = d.calib;
     if (!Array.isArray(cts) || !Array.isArray(cal) || cal.length < 2) return;
+    // Gain drifts, largely with temperature, so the same photon lands in a different
+    // channel on a warm afternoon than on a cold night. The publisher locates the
+    // potassium-40 line — known to be at 1460.8 keV, and the strongest identifiable
+    // feature in a background spectrum — and returns the factor that puts it back
+    // where it belongs. Without this the named lines drift off their markers.
+    var gain = (d.k40_lock && isFinite(d.k40_lock.factor)) ? d.k40_lock.factor : 1;
     var E = function (i) {
-      return cal[0] + cal[1] * i + (cal.length > 2 ? cal[2] * i * i : 0);
+      return (cal[0] + cal[1] * i + (cal.length > 2 ? cal[2] * i * i : 0)) * gain;
     };
 
     // The analyser's final channel is a catch-all for everything above the top of
@@ -609,12 +629,52 @@ footer a{color:var(--signal);text-decoration:none}
     els["s-path"].setAttribute("d", "M" + bins.map(function (b) {
       return SX(b[0]).toFixed(1) + " " + SY(b[1]).toFixed(1);
     }).join(" L"));
+
+    // The newest single hour, on the same axis. Both are already counts per hour,
+    // which is what makes them directly comparable: the mean is smooth because it
+    // averages many hours, and the departure of one hour from it is the signal.
+    var lat = d.latest;
+    if (lat && Array.isArray(lat.counts) && lat.live_time_s > 0) {
+      var lh = lat.live_time_s / 3600, lc = lat.counts;
+      var lbins = [];
+      for (var k = 0; k < Math.min(lc.length, n); k += REBIN) {
+        var ls = 0;
+        for (var q = k; q < Math.min(k + REBIN, lc.length, n); q++) ls += lc[q];
+        lbins.push([E(k + REBIN / 2), ls / lh]);
+      }
+      els["s-latest"].setAttribute("d", "M" + lbins.map(function (b) {
+        return SX(b[0]).toFixed(1) + " " + SY(b[1]).toFixed(1);
+      }).join(" L"));
+      els["s-latest"].style.display = "";
+    } else {
+      els["s-latest"].style.display = "none";
+    }
+
+    // Direct labels rather than a legend box — two series, named where they sit.
+    var key = els["s-key"];
+    key.textContent = "";
+    var keyItems = [[hoursLabel(hours) + " mean", "#c2543a"]];
+    if (lat && lat.live_time_s > 0) keyItems.push(["latest hour", "#1f6f9c"]);
+    keyItems.forEach(function (it, i) {
+      var kt = svg("text", { class: "spec-key", x: SL + SPW - 4,
+                             y: ST + 12 + i * 13, "text-anchor": "end", fill: it[1] });
+      kt.textContent = it[0];
+      key.appendChild(kt);
+    });
+
     els["s-empty"].style.display = "none";
 
     var hours = (d.live_time_s || 0) / 3600;
     els["spec-note"].textContent =
       "mean per hour · " + hours.toFixed(1) + " h accumulated · " +
       sumAll(cts).toLocaleString("en") + " counts total";
+    var lockEl = document.getElementById("k40-lock");
+    if (lockEl) {
+      lockEl.textContent = d.k40_lock
+        ? "K-40 lock: centroid " + d.k40_lock.centroid.toFixed(1) +
+          " keV, axis ×" + d.k40_lock.factor.toFixed(4)
+        : "K-40 lock: pending — needs more counts in the peak";
+    }
   }
   function sumAll(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s; }
 
@@ -676,9 +736,10 @@ footer a{color:var(--signal);text-decoration:none}
     });
 
     // energy axis under the canvas
+    var wgain = (d.k40_lock && isFinite(d.k40_lock.factor)) ? d.k40_lock.factor : 1;
     var E = function (i) {
       var ch = i * rb;
-      return cal[0] + cal[1] * ch + (cal.length > 2 ? cal[2] * ch * ch : 0);
+      return (cal[0] + cal[1] * ch + (cal.length > 2 ? cal[2] * ch * ch : 0)) * wgain;
     };
     var ax = els["wf-axis"];
     ax.textContent = "";
