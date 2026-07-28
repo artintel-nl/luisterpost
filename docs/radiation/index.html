@@ -103,6 +103,8 @@ svg.trace{display:block;width:100%;height:auto}
 .spread{fill:var(--ink);opacity:.13}
 .line{fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
 .head-dot{fill:var(--signal);stroke:var(--paper);stroke-width:2}
+.baseline{stroke:var(--oxide);stroke-width:1.4;stroke-dasharray:6 4}
+.baseline-lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;fill:var(--oxide)}
 .crosshair{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:0}
 .spec-line{fill:none;stroke:var(--ink);stroke-width:1.4;stroke-linejoin:round}
 .spec-mark{stroke:var(--oxide);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
@@ -174,7 +176,7 @@ footer a{color:var(--signal);text-decoration:none}
       <div class="now-verdict mono" id="verdict"><i aria-hidden="true"></i><span id="verdict-txt">Waiting</span></div>
     </div>
     <div class="now-ctx">
-      <p>Natural background at ground level is normally somewhere around <b>0.05–0.15&nbsp;µSv/h</b>, varying with geology, altitude and weather. This station's own long-run median is <b>0.082&nbsp;µSv/h</b>.</p>
+      <p>Natural background at ground level is normally somewhere around <b>0.05–0.15&nbsp;µSv/h</b>, varying with geology, altitude and weather. This station's own running mean is <b id="ctx-base">—</b>, drawn on the trace below.</p>
       <p style="margin-top:.7em">For scale: a single chest X-ray is roughly <b>20&nbsp;µSv</b>, and an Amsterdam–New&nbsp;York flight around <b>30–50&nbsp;µSv</b> in total, because there is far less atmosphere overhead to absorb cosmic rays.</p>
     </div>
   </dl>
@@ -197,6 +199,7 @@ footer a{color:var(--signal);text-decoration:none}
         <g id="c-grid"></g>
         <g id="c-band"></g>
         <g id="c-spread"></g>
+        <g id="c-base"></g>
         <path id="c-line" class="line"></path>
         <circle id="c-head" class="head-dot" r="4" style="display:none"></circle>
         <line id="c-cross" class="crosshair" y1="10" y2="272"></line>
@@ -324,11 +327,12 @@ footer a{color:var(--signal);text-decoration:none}
   var PW = W - L - R, PH = H - T - B;
 
   var points = [];        // [epoch_s, mean, min, max]
+  var baseline = null;    // {mean, hours} — this station's own long-run mean
   var els = {};
   ["c-grid","c-band","c-spread","c-line","c-head","c-cross","c-hit","c-empty",
    "tip","tbody","tbl-empty","dose","verdict","verdict-txt","conn","conn-txt",
    "r-cps","r-mean","r-min","r-max","chart-note",
-   "s-grid","s-lines","s-path","s-empty","spec-note",
+   "s-grid","s-lines","s-path","s-empty","spec-note","c-base",
    "wf","wf-times","wf-axis","wf-scale","wf-scale-max","wf-note",
    "wf-of","wf-of-rate"]
     .forEach(function (id) { els[id] = document.getElementById(id); });
@@ -348,6 +352,7 @@ footer a{color:var(--signal);text-decoration:none}
     if (tHi - tLo < 60) tHi = tLo + 60;
     var lo = Math.min(NORMAL_LO, Math.min.apply(null, points.map(function (p) { return p[2]; })));
     var hi = Math.max(NORMAL_HI, Math.max.apply(null, points.map(function (p) { return p[3]; })));
+    if (baseline) { lo = Math.min(lo, baseline.mean); hi = Math.max(hi, baseline.mean); }
     var pad = Math.max((hi - lo) * 0.12, 0.005);
     yLo = Math.max(0, lo - pad); yHi = hi + pad;
   }
@@ -408,6 +413,22 @@ footer a{color:var(--signal);text-decoration:none}
       return X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1);
     }).join(" L"));
 
+    // This station's own long-run mean. The 0.05–0.15 band says what is normal
+    // anywhere; this line says what is normal here, which is the more useful
+    // comparison for a reading taken right now.
+    els["c-base"].textContent = "";
+    if (baseline && baseline.mean >= yLo && baseline.mean <= yHi) {
+      var by = Y(baseline.mean);
+      els["c-base"].appendChild(svg("line", { class: "baseline",
+        x1: L, x2: L + PW, y1: by, y2: by }));
+      var blbl = svg("text", { class: "baseline-lbl", x: L + PW - 4, y: by - 5,
+                               "text-anchor": "end" });
+      blbl.textContent = (baseline.hours >= 48
+        ? Math.round(baseline.hours / 24) + "d"
+        : baseline.hours + "h") + " mean " + baseline.mean.toFixed(3);
+      els["c-base"].appendChild(blbl);
+    }
+
     var last = points[points.length - 1];
     els["c-head"].setAttribute("cx", X(last[0]));
     els["c-head"].setAttribute("cy", Y(last[1]));
@@ -419,6 +440,10 @@ footer a{color:var(--signal);text-decoration:none}
     els["r-min"].textContent = fmt(Math.min.apply(null, points.map(function (p) { return p[2]; })));
     els["r-max"].textContent = fmt(Math.max.apply(null, points.map(function (p) { return p[3]; })));
     els["chart-note"].textContent = points.length + " × 1-minute means";
+    if (baseline) {
+      document.getElementById("ctx-base").textContent =
+        baseline.mean.toFixed(3) + " µSv/h";
+    }
 
     renderTable();
   }
@@ -726,6 +751,7 @@ footer a{color:var(--signal);text-decoration:none}
 
     if (topic === "luisterpost/radiation/history") {
       if (!Array.isArray(d.points)) return;
+      baseline = (d.baseline && isFinite(d.baseline.mean)) ? d.baseline : null;
       points = d.points.filter(function (p) {
         return Array.isArray(p) && p.length >= 4 && p.every(function (v) { return isFinite(v); });
       });
