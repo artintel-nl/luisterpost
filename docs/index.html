@@ -148,6 +148,7 @@ footer a{color:var(--signal);text-decoration:none}
     <a class="wordmark" href="/">Luisterpost</a>
     <nav aria-label="Live channels">
       <a href="/aircraft/">Planes</a>
+      <a href="/drones/">Drones</a>
       <a href="/radiation/">Radiation</a>
     </nav>
     <span class="live mono is-idle" id="rx"><i aria-hidden="true"></i><span id="rx-txt">LISTENING</span></span>
@@ -179,7 +180,7 @@ footer a{color:var(--signal);text-decoration:none}
   </section>
 
   <section class="chart" aria-label="The four bands the station receives on">
-    <div class="chart-head"><span>Receiving bands</span><span>4 media · 2 live channels</span></div>
+    <div class="chart-head"><span>Receiving bands</span><span>4 media · 3 live channels</span></div>
     <div class="bands">
       <div class="band">
         <span class="tick t-sound" aria-hidden="true"></span>
@@ -199,7 +200,7 @@ footer a{color:var(--signal);text-decoration:none}
         <p class="range mono">905 NM</p>
         <p class="what">Near-infrared laser backscatter off dust and pollen. Not yet built.</p>
       </div>
-      <a class="band" href="#ch02">
+      <a class="band" href="#ch03">
         <span class="tick t-gamma" aria-hidden="true"></span>
         <h2>Gamma</h2><span class="nl">gamma</span>
         <p class="range mono">0.05 – 3 MEV</p>
@@ -207,7 +208,7 @@ footer a{color:var(--signal);text-decoration:none}
       </a>
     </div>
   </section>
-  <p class="chart-note">The station receives on four physical media. Two channels are published live so far — the rest of the instruments report into the station’s own logs.</p>
+  <p class="chart-note">The station receives on four physical media. Three channels are published live so far — the rest of the instruments report into the station’s own logs.</p>
 
   <section class="prose">
     <p>A luisterpost is what the Dutch military called a signals intercept station — a room full of receivers, pointed at whatever was passing through the air. This one is not on a border or a hilltop. It is an ordinary house in Utrecht, fitted over the years with microphones, antennas, particle detectors and weather instruments, all reporting into one small MQTT broker in the meter cupboard.</p>
@@ -226,6 +227,13 @@ footer a{color:var(--signal);text-decoration:none}
 
     <div class="channel" id="ch02">
       <span class="ch mono">CH 02</span>
+      <div><h3>Drones — Remote ID</h3><p class="desc">EU/ASTM Remote ID receiver on two XIAO ESP32-S3 boards — the WiFi and Bluetooth beacons drones are required to broadcast. Published as counts and signal strength only, never tracks. <a href="/drones/">See who is broadcasting now →</a></p></div>
+      <span class="medium mono md-radio">Radio 2.4 GHz</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch03">
+      <span class="ch mono">CH 03</span>
       <div><h3>Radiation — Radiacode RC110</h3><p class="desc">Gamma background monitor: a Radiacode RC110 scintillation detector on an ESP32-P4 bridge, logging dose rate and daily energy spectra. <a href="/radiation/">See the background right now →</a></p></div>
       <span class="medium mono md-gamma">Gamma 0.05–3 MeV</span>
       <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>

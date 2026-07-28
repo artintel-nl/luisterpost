@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drones — Remote ID — Luisterpost</title>
+<meta name="description" content="Live EU/ASTM Remote ID reception at the Luisterpost listening post in Utrecht: how many drone beacons are audible and how strong they are, published as counts only.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1c17;
+  --ink-inverse:#ece8dd;
+  --signal:#d9963f;
+  --tile:#171a14;
+  --paper:#f4f1e8;
+  --paper-sunk:#e9e5d9;
+  --rule:#d3cebe;
+  --rule-dark:#2b3026;
+  --muted:#6d6a5c;
+  --muted-dark:#8d9483;
+  --link:#8a5a1e;
+  --link-hover:#d9963f;
+  --oxide:#c2543a;
+  --olive:#7fa651;
+  --slate:#1f6f9c;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Archivo",system-ui,sans-serif;
+  background:var(--paper-sunk);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.55;
+  text-wrap:pretty;
+}
+a{color:var(--link);transition:color 200ms ease}
+a:hover{color:var(--link-hover)}
+a:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.mono{font-family:"JetBrains Mono",monospace}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
+.hdr{display:flex;align-items:center;gap:14px;padding:16px 24px;max-width:960px;margin:0 auto}
+.hdr img{width:30px;height:30px;display:block}
+.hdr .wordmark{font-weight:700;font-size:15px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-inverse);text-decoration:none}
+.hdr nav{margin-left:40px;display:flex;gap:20px}
+.hdr nav a{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-dark);text-decoration:none}
+.hdr nav a:hover,.hdr nav a[aria-current]{color:var(--ink-inverse)}
+.hdr .live{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--signal)}
+.hdr .live i{width:7px;height:7px;border-radius:50%;background:var(--signal);flex:none}
+.hdr .live.is-down{color:var(--muted-dark)}
+.hdr .live.is-down i{background:var(--muted-dark)}
+.hdr .live.is-live i{animation:beat 2s ease-in-out infinite}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.3}}
+@media (max-width:700px){.hdr nav{display:none}}
+
+.pagehead{padding:44px 0 26px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:block}
+.pagehead h1{font-weight:700;font-size:clamp(28px,4.6vw,42px);letter-spacing:-.015em;line-height:1.08}
+.pagehead .thesis{margin-top:12px;font-size:16px;line-height:1.5;max-width:34em;color:var(--muted)}
+.tick-radio{display:block;height:5px;width:64px;background:var(--oxide);margin-bottom:16px}
+
+.now{border:1px solid var(--rule);background:var(--paper);display:grid;grid-template-columns:minmax(200px,.9fr) minmax(200px,.9fr) 1.5fr;margin-bottom:10px}
+.now div{padding:22px}
+.now div+div{border-left:1px solid var(--rule)}
+.now dt{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.now-val{font-family:"JetBrains Mono",monospace;font-size:clamp(30px,5vw,46px);font-weight:500;line-height:1;font-variant-numeric:tabular-nums}
+.now-sub{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5}
+.now-ctx{font-size:13.5px;color:var(--muted);line-height:1.6}
+.now-ctx b{color:var(--ink);font-weight:600}
+@media (max-width:820px){.now{grid-template-columns:1fr 1fr}.now div:last-child{grid-column:1/-1;border-left:none;border-top:1px solid var(--rule)}}
+
+.card{border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.card-head{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule);font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.chartwrap{position:relative;padding:14px 8px 6px}
+svg.chart{display:block;width:100%;height:auto}
+.gridline{stroke:var(--rule);stroke-width:1;stroke-dasharray:2 5}
+.axis{stroke:var(--rule);stroke-width:1}
+.axis-lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;fill:var(--muted)}
+.area-heard{fill:var(--oxide);opacity:.14}
+.line-heard{fill:none;stroke:var(--oxide);stroke-width:1.8;stroke-linejoin:round}
+.line-near{fill:none;stroke:var(--slate);stroke-width:1.6;stroke-linejoin:round}
+.key{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em}
+.chart-empty{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;fill:var(--muted);text-anchor:middle}
+.bar{fill:var(--oxide)}
+.bar-near{fill:var(--slate)}
+.bar-lbl{font-family:"JetBrains Mono",monospace;font-size:10px;fill:var(--muted)}
+.cap{padding:2px 16px 18px;font-size:13px;color:var(--muted);line-height:1.6;max-width:62em}
+.cap b{color:var(--ink);font-weight:600}
+
+.withheld{border:1px solid var(--rule);background:var(--paper);padding:22px;margin-bottom:12px}
+.withheld h2{font-size:15px;font-weight:600;margin-bottom:10px}
+.withheld p{font-size:13.5px;color:var(--muted);max-width:56em;line-height:1.6}
+.withheld p+p{margin-top:.7em}
+.withheld ul{margin:.7em 0 0 1.1em;font-size:13.5px;color:var(--muted)}
+.withheld li{margin-bottom:.25em}
+.withheld code{font-family:"JetBrains Mono",monospace;font-size:12px;background:var(--paper-sunk);padding:1px 5px;border:1px solid var(--rule)}
+
+.note{font-size:12.5px;color:var(--muted);margin-bottom:56px;max-width:46em}
+.note code{font-family:"JetBrains Mono",monospace;font-size:12px;background:var(--paper);padding:1px 5px;border:1px solid var(--rule)}
+.note p+p{margin-top:.8em}
+
+footer{background:var(--tile);color:var(--muted-dark);padding:26px 0 44px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+footer a{color:var(--signal);text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <img src="../assets/mark-on-dark.svg" alt="" width="30" height="30">
+    <a class="wordmark" href="/">Luisterpost</a>
+    <nav aria-label="Live channels">
+      <a href="/aircraft/">Planes</a>
+      <a href="/drones/" aria-current="page">Drones</a>
+      <a href="/radiation/">Radiation</a>
+    </nav>
+    <span class="live mono is-down" id="conn"><i aria-hidden="true"></i><span id="conn-txt">CONNECTING</span></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="pagehead">
+    <span class="tick-radio" aria-hidden="true"></span>
+    <span class="eyebrow">Channel 02 · Remote ID · Radio 2.4 GHz</span>
+    <h1>Who is broadcasting overhead</h1>
+    <p class="thesis">European and ASTM rules require most drones to broadcast their identity continuously, in the clear, over WiFi and Bluetooth. Two ESP32-S3 boards in the garden listen for those beacons. This page reports how many are audible and how close — and nothing else.</p>
+  </section>
+
+  <dl class="now">
+    <div>
+      <dt>Broadcasters heard</dt>
+      <div class="now-val" id="heard">—</div>
+      <p class="now-sub">distinct airframes in the last <span id="win">5</span> minutes</p>
+    </div>
+    <div>
+      <dt>Plausibly nearby</dt>
+      <div class="now-val" id="near">—</div>
+      <p class="now-sub">stronger than <span id="thresh">−70</span> dBm</p>
+    </div>
+    <div class="now-ctx">
+      <p>Remote ID beacons carry for kilometres, so most of what a receiver hears is nowhere
+      near it. The large number is <b>not</b> a count of drones overhead — it is the number of
+      distinct airframes whose beacons reached this garden, most of them faintly, from across
+      the city and beyond.</p>
+      <p style="margin-top:.6em">The smaller number is the honest one: how many were loud
+      enough to plausibly be close.</p>
+    </div>
+  </dl>
+
+  <section class="card">
+    <div class="card-head">
+      <span>Broadcasters over time</span>
+      <span id="hist-note">collecting…</span>
+    </div>
+    <div class="chartwrap">
+      <svg class="chart" id="chart" viewBox="0 0 900 300" role="img"
+           aria-label="Number of distinct Remote ID broadcasters heard over the last three hours, and how many of those were strong enough to be nearby.">
+        <g id="c-grid"></g>
+        <path id="c-area" class="area-heard"></path>
+        <path id="c-heard" class="line-heard"></path>
+        <path id="c-near" class="line-near"></path>
+        <g id="c-key"></g>
+        <text id="c-empty" class="chart-empty" x="470" y="140">Collecting…</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span>Signal strength distribution</span><span>right = closer</span></div>
+    <div class="chartwrap">
+      <svg class="chart" id="rssi" viewBox="0 0 900 260" role="img"
+           aria-label="How many broadcasters fall into each signal-strength band. Weaker signals are further away.">
+        <g id="r-body"></g>
+        <text id="r-empty" class="chart-empty" x="470" y="120">Waiting…</text>
+      </svg>
+    </div>
+    <p class="cap">Signal strength is the only distance cue published here, and it is a rough
+    one — a drone behind a building reads weak whether it is near or far. The distribution is
+    the useful part: a long tail at the weak end means the receiver is hearing the whole city,
+    not the garden.</p>
+  </section>
+
+  <section class="withheld">
+    <h2>What this page does not publish</h2>
+    <p>A Remote ID beacon is unencrypted and contains a great deal more than a count. Every
+    message the receiver decodes carries:</p>
+    <ul>
+      <li>the drone's live position, altitude and height above ground</li>
+      <li><b>the pilot's position</b> — where the operator is standing</li>
+      <li>the airframe serial number and any registered operator ID</li>
+      <li>the transmitter's MAC address</li>
+    </ul>
+    <p style="margin-top:.8em">None of it leaves the house. The station's publisher consumes
+    those messages to maintain a count and a signal-strength histogram, and returns nothing —
+    the raw fields are never republished, never logged to the public feed, and never reach this
+    page. The public topic <code>luisterpost/drones/count</code> contains integers and nothing
+    else.</p>
+    <p>That is a deliberate limit rather than an oversight. Publishing drone tracks would mean
+    publishing the movements of identifiable people who have no say in it, which is a different
+    thing from publishing the weather.</p>
+  </section>
+
+  <div class="note">
+    <p>Counts arrive on the public MQTT broker at <code>wss://live.luisterpost.io</code>,
+    topics <code>luisterpost/drones/count</code> and <code>luisterpost/drones/history</code>.
+    The receiver is two XIAO ESP32-S3 boards watching WiFi and Bluetooth advertisements; its
+    own liveness is on <code>luisterpost/drones/status</code>.</p>
+    <p>A broadcaster is counted once per five-minute window no matter how many beacons it
+    sends. Airframes that change MAC address between windows may be counted more than once,
+    so the figure is an upper bound on distinct aircraft.</p>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Luisterpost · Utrecht NL · 52.09°N 5.12°E</span>
+    <span>Code MIT · Data CC BY 4.0 · <a href="https://github.com/artintel-nl/luisterpost">GitHub</a></span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"
+        integrity="sha384-u4uqeACkFcoKl57rBQJHVGDd1pqhW4w8X3WjTu1ZksPdxoLqdt34jpoNkJisE25W"
+        crossorigin="anonymous"></script>
+<script>
+(function () {
+  "use strict";
+  var BROKER = "wss://live.luisterpost.io/";
+  var W = 900, H = 300, L = 52, R = 18, T = 12, B = 42;
+  var PW = W - L - R, PH = H - T - B;
+
+  var points = [];
+  var els = {};
+  ["c-grid","c-area","c-heard","c-near","c-key","c-empty","r-body","r-empty",
+   "heard","near","win","thresh","conn","conn-txt","hist-note"]
+    .forEach(function (id) { els[id] = document.getElementById(id); });
+
+  function svg(tag, attrs) {
+    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  // ---- time series ---------------------------------------------------------
+  function renderChart() {
+    els["c-empty"].style.display = points.length ? "none" : "";
+    if (!points.length) return;
+    var tLo = points[0][0], tHi = points[points.length - 1][0];
+    if (tHi - tLo < 60) tHi = tLo + 60;
+    var vMax = Math.max(4, Math.max.apply(null, points.map(function (p) { return p[1]; })));
+    vMax = Math.ceil(vMax / 10) * 10;
+    var X = function (t) { return L + (t - tLo) / (tHi - tLo) * PW; };
+    var Y = function (v) { return T + PH - v / vMax * PH; };
+
+    var g = els["c-grid"]; g.textContent = "";
+    for (var i = 0; i <= 4; i++) {
+      var v = vMax * i / 4, y = Y(v);
+      g.appendChild(svg("line", { class: "gridline", x1: L, x2: L + PW, y1: y, y2: y }));
+      var lb = svg("text", { class: "axis-lbl", x: L - 8, y: y + 3, "text-anchor": "end" });
+      lb.textContent = Math.round(v);
+      g.appendChild(lb);
+    }
+    g.appendChild(svg("line", { class: "axis", x1: L, x2: L + PW, y1: T + PH, y2: T + PH }));
+    var span = tHi - tLo, step = span > 7200 ? 1800 : span > 3600 ? 900 : span > 900 ? 300 : 60;
+    for (var tt = Math.ceil(tLo / step) * step; tt <= tHi; tt += step) {
+      var d = new Date(tt * 1000);
+      var xl = svg("text", { class: "axis-lbl", x: X(tt), y: T + PH + 18, "text-anchor": "middle" });
+      xl.textContent = String(d.getHours()).padStart(2, "0") + ":" +
+                       String(d.getMinutes()).padStart(2, "0");
+      g.appendChild(xl);
+    }
+
+    var pts = points.map(function (p) { return X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1); });
+    els["c-area"].setAttribute("d",
+      "M" + X(points[0][0]).toFixed(1) + " " + (T + PH) +
+      " L" + pts.join(" L") +
+      " L" + X(points[points.length - 1][0]).toFixed(1) + " " + (T + PH) + " Z");
+    els["c-heard"].setAttribute("d", "M" + pts.join(" L"));
+    els["c-near"].setAttribute("d", "M" + points.map(function (p) {
+      return X(p[0]).toFixed(1) + " " + Y(p[2]).toFixed(1);
+    }).join(" L"));
+
+    var key = els["c-key"]; key.textContent = "";
+    [["heard", "#c2543a"], ["nearby", "#1f6f9c"]].forEach(function (it, i) {
+      var kt = svg("text", { class: "key", x: L + PW - 4, y: T + 12 + i * 13,
+                             "text-anchor": "end", fill: it[1] });
+      kt.textContent = it[0];
+      key.appendChild(kt);
+    });
+    els["hist-note"].textContent = points.length + " min";
+  }
+
+  // ---- signal strength histogram -------------------------------------------
+  function renderRssi(h) {
+    var body = els["r-body"];
+    if (!h || !Array.isArray(h.counts) || !h.counts.length) return;
+    body.textContent = "";
+    els["r-empty"].style.display = "none";
+    var RW = 900, RH = 260, RL = 52, RR = 18, RT = 16, RB = 46;
+    var rpw = RW - RL - RR, rph = RH - RT - RB;
+    var n = h.counts.length;
+    var max = Math.max.apply(null, h.counts.concat([1]));
+    var bw = rpw / n;
+    for (var i = 0; i < n; i++) {
+      var hgt = h.counts[i] / max * rph;
+      // Nearer signals (the right-hand bins) get the accent, matching the
+      // "plausibly nearby" figure at the top of the page.
+      var near = h.edges[i] >= -70;
+      body.appendChild(svg("rect", { class: near ? "bar-near" : "bar",
+        x: RL + i * bw + 2, y: RT + rph - hgt, width: Math.max(1, bw - 4), height: hgt }));
+      if (h.counts[i] > 0) {
+        var vl = svg("text", { class: "bar-lbl", x: RL + i * bw + bw / 2,
+                               y: RT + rph - hgt - 5, "text-anchor": "middle" });
+        vl.textContent = h.counts[i];
+        body.appendChild(vl);
+      }
+      var el = svg("text", { class: "axis-lbl", x: RL + i * bw + bw / 2,
+                             y: RT + rph + 18, "text-anchor": "middle" });
+      el.textContent = h.edges[i];
+      body.appendChild(el);
+    }
+    body.appendChild(svg("line", { class: "axis", x1: RL, x2: RL + rpw,
+                                   y1: RT + rph, y2: RT + rph }));
+    var ul = svg("text", { class: "axis-lbl", x: RL + rpw, y: RT + rph + 36,
+                           "text-anchor": "end" });
+    ul.textContent = "signal strength dBm";
+    body.appendChild(ul);
+  }
+
+  // ---- live ----------------------------------------------------------------
+  function setConn(s, txt) { els.conn.className = "live mono " + s; els["conn-txt"].textContent = txt; }
+
+  setConn("is-down", "CONNECTING");
+  var client = mqtt.connect(BROKER, {
+    clientId: "luisterpost-drones-" + Math.random().toString(16).slice(2, 10),
+    keepalive: 45, reconnectPeriod: 4000, clean: true
+  });
+  client.on("connect", function () {
+    setConn("is-live", "RECEIVING");
+    client.subscribe("luisterpost/drones/count");
+    client.subscribe("luisterpost/drones/history");
+    client.subscribe("luisterpost/drones/status");
+    client.subscribe("luisterpost/station/status");
+  });
+  client.on("reconnect", function () { setConn("is-down", "RECONNECTING"); });
+  client.on("close",     function () { setConn("is-down", "OFFLINE"); });
+  client.on("error",     function () { setConn("is-down", "ERROR"); });
+
+  client.on("message", function (topic, payload) {
+    var d;
+    try { d = JSON.parse(payload.toString()); } catch (e) { return; }
+
+    if (topic === "luisterpost/drones/count") {
+      if (isFinite(d.broadcasters_heard)) els.heard.textContent = d.broadcasters_heard;
+      if (isFinite(d.nearby)) els.near.textContent = d.nearby;
+      if (isFinite(d.window_s)) els.win.textContent = Math.round(d.window_s / 60);
+      if (isFinite(d.nearby_rssi_threshold)) {
+        els.thresh.textContent = String(d.nearby_rssi_threshold).replace("-", "−");
+      }
+      if (d.rssi) renderRssi(d.rssi);
+      return;
+    }
+    if (topic === "luisterpost/drones/history") {
+      if (!Array.isArray(d.points)) return;
+      points = d.points.filter(function (p) {
+        return Array.isArray(p) && p.length >= 3 && p.every(function (v) { return isFinite(v); });
+      });
+      renderChart();
+      return;
+    }
+    if (topic === "luisterpost/station/status" && d.online === false) {
+      setConn("is-down", "STATION OFFLINE");
+    }
+  });
+})();
+</script>
+</body>
+</html>
