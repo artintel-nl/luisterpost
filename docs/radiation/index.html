@@ -113,6 +113,9 @@ svg.trace{display:block;width:100%;height:auto}
 .wf-times{flex:none;display:flex;flex-direction:column;font-size:9.5px;letter-spacing:.06em;color:var(--muted);order:-1;text-align:right}
 .wf-times span{display:block;height:14px;line-height:14px}
 .wf-axis{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.1em;color:var(--muted);margin-top:6px;padding-left:44px}
+.wf-over{flex:none;width:92px}
+.wf-over canvas{display:block;width:92px;border:1px solid var(--rule);border-left:none}
+.wf-over-lbl{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:right;margin-top:6px}
 .wf-legend{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .wf-scale{display:inline-block;width:180px;height:9px;border:1px solid var(--rule)}
 .spec-cap{padding:4px 16px 18px;font-size:13px;color:var(--muted);line-height:1.6;max-width:60em}
@@ -206,7 +209,7 @@ footer a{color:var(--signal);text-decoration:none}
 
   <section class="card">
     <div class="card-head">
-      <span>Energy spectrum · <span class="unit">keV</span></span>
+      <span>Mean energy spectrum · <span class="unit">keV</span></span>
       <span id="spec-note">accumulating…</span>
     </div>
     <div class="chartwrap">
@@ -234,8 +237,12 @@ footer a{color:var(--signal);text-decoration:none}
       <div class="wf-rows">
         <canvas id="wf" width="1020" height="336" aria-label="Waterfall: each row is one hour of gamma spectrum, most recent at the top. Horizontal position is photon energy, darkness is counts. The hourly figures are in the summary table below."></canvas>
         <div class="wf-times mono" id="wf-times" aria-hidden="true"></div>
+        <div class="wf-over">
+          <canvas id="wf-of" width="90" height="336" aria-label="Counts per hour above the top of the detector's range, aligned with the waterfall rows."></canvas>
+        </div>
       </div>
       <div class="wf-axis mono" id="wf-axis" aria-hidden="true"></div>
+      <div class="wf-over-lbl mono" id="wf-of-lbl">above range — <span id="wf-of-rate">—</span></div>
       <div class="wf-legend mono">
         <span>counts</span>
         <span class="wf-scale" id="wf-scale"></span>
@@ -246,6 +253,12 @@ footer a{color:var(--signal);text-decoration:none}
     steady bands. When rain washes radon daughters out of the air, the <b>Pb-214</b> and
     <b>Bi-214</b> region darkens for a few hours and then fades — an event the 24-hour sum
     above averages away entirely.</p>
+    <p class="spec-cap" style="padding-top:0">The bars on the right are the detector's catch-all:
+    everything arriving with more energy than the top of its range, about 2.8&nbsp;MeV. Nothing
+    in ordinary building materials reaches that high — these are mostly cosmic-ray secondaries,
+    the shower of particles left over when something from space hits the top of the atmosphere.
+    They have no energy value of their own, which is why they cannot appear on the spectrum
+    above.</p>
   </section>
 
   <section class="card">
@@ -316,7 +329,8 @@ footer a{color:var(--signal);text-decoration:none}
    "tip","tbody","tbl-empty","dose","verdict","verdict-txt","conn","conn-txt",
    "r-cps","r-mean","r-min","r-max","chart-note",
    "s-grid","s-lines","s-path","s-empty","spec-note",
-   "wf","wf-times","wf-axis","wf-scale","wf-scale-max","wf-note"]
+   "wf","wf-times","wf-axis","wf-scale","wf-scale-max","wf-note",
+   "wf-of","wf-of-rate"]
     .forEach(function (id) { els[id] = document.getElementById(id); });
 
   function svg(tag, attrs) {
@@ -499,25 +513,32 @@ footer a{color:var(--signal);text-decoration:none}
       return cal[0] + cal[1] * i + (cal.length > 2 ? cal[2] * i * i : 0);
     };
 
-    // The final channel is the analyser's overflow bin: everything above the top of
-    // the range lands there, so it always stands as a tall spike at the right edge.
-    // Measured 2026-07-28 it held 190 counts behind eleven empty channels. Plotted
-    // as-is it reads as a strong 2.8 MeV line, which would be simply wrong. The raw
-    // array on the MQTT topic keeps it; the chart does not draw it.
-    var n = cts.length - 1;
+    // The analyser's final channel is a catch-all for everything above the top of
+    // its range — no energy of its own, so it cannot share this axis. The publisher
+    // reports it as `overflow`; older payloads still carry it inline, so strip it
+    // here only if it has not already been separated out.
+    var n = (d.overflow === undefined) ? cts.length - 1 : cts.length;
+
+    // Plotted as a MEAN RATE, not a running total. The accumulation grows from one
+    // hour to twenty-four, so a raw sum would climb 24x and rescale its own axis —
+    // today's chart could not be compared with tomorrow's. Counts per hour is stable
+    // and is the quantity a spectrum is normally quoted in.
+    var hours = (d.live_time_s || 3600) / 3600;
 
     var bins = [];
     for (var i = 0; i < n; i += REBIN) {
       var sum = 0;
       for (var j = i; j < Math.min(i + REBIN, n); j++) sum += cts[j];
-      bins.push([E(i + REBIN / 2), sum]);
+      bins.push([E(i + REBIN / 2), sum / hours]);
     }
     var eMax = E(n - 1);
     var cMax = Math.max.apply(null, bins.map(function (b) { return b[1]; }));
     if (!(cMax > 0)) return;
 
     var yTop = Math.pow(10, Math.ceil(Math.log10(cMax)));
-    var yBot = 0.5;                        // zero counts sit on the floor
+    // 0.1/h is one count every ten hours — below that the bin has effectively
+    // recorded nothing, and there is no point giving it axis space.
+    var yBot = 0.1;
     var lg = Math.log10;
     var SX = function (e) { return SL + e / eMax * SPW; };
     var SY = function (v) {
@@ -526,11 +547,12 @@ footer a{color:var(--signal);text-decoration:none}
 
     var g = els["s-grid"];
     g.textContent = "";
-    for (var p10 = yBot; p10 <= yTop; p10 *= 10) {
+    for (var dec = Math.round(Math.log10(yBot)); dec <= Math.round(Math.log10(yTop)); dec++) {
+      var p10 = Math.pow(10, dec);
       var y = SY(p10);
       g.appendChild(svg("line", { class: "gridline", x1: SL, x2: SL + SPW, y1: y, y2: y }));
       var yl = svg("text", { class: "axis-lbl", x: SL - 8, y: y + 3, "text-anchor": "end" });
-      yl.textContent = p10 < 1 ? "0" : String(p10);
+      yl.textContent = p10 < 1 ? p10.toFixed(1) : String(Math.round(p10));
       g.appendChild(yl);
     }
     for (var e = 0; e <= eMax; e += 500) {
@@ -544,7 +566,7 @@ footer a{color:var(--signal);text-decoration:none}
     cl.textContent = "photon energy keV";
     g.appendChild(cl);
     var ct = svg("text", { class: "axis-lbl", x: SL - 8, y: ST - 8, "text-anchor": "end" });
-    ct.textContent = "counts";
+    ct.textContent = "counts/h";
     g.appendChild(ct);
 
     // named background lines
@@ -566,7 +588,8 @@ footer a{color:var(--signal);text-decoration:none}
 
     var hours = (d.live_time_s || 0) / 3600;
     els["spec-note"].textContent =
-      hours.toFixed(1) + " h accumulated · " + sumAll(cts).toLocaleString("en") + " counts";
+      "mean per hour · " + hours.toFixed(1) + " h accumulated · " +
+      sumAll(cts).toLocaleString("en") + " counts total";
   }
   function sumAll(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s; }
 
@@ -639,6 +662,25 @@ footer a{color:var(--signal);text-decoration:none}
       s.textContent = Math.round(E(Math.floor(fr * (nb - 1)))) + (fr === 1 ? " keV" : "");
       ax.appendChild(s);
     });
+
+    // companion column: counts above the top of the range, same rows
+    var of = els["wf-of"], octx = of.getContext("2d");
+    of.height = shown * WF_ROW_H;
+    of.style.height = (shown * WF_ROW_H) + "px";
+    octx.clearRect(0, 0, of.width, of.height);
+    var ofVals = ordered.slice(0, WF_ROWS).map(function (f) {
+      return typeof f.overflow === "number" ? f.overflow : 0;
+    });
+    var ofMax = Math.max.apply(null, ofVals.concat([1]));
+    ofVals.forEach(function (v, row) {
+      octx.fillStyle = "#c2543a";
+      var w = Math.max(1, v / ofMax * (of.width - 6));
+      octx.fillRect(3, row * WF_ROW_H + 3, w, WF_ROW_H - 6);
+    });
+    var ofPerHour = ofVals.length
+      ? Math.round(ofVals.reduce(function (a, b) { return a + b; }, 0) / ofVals.length)
+      : 0;
+    els["wf-of-rate"].textContent = ofPerHour.toLocaleString("en") + "/h";
 
     els["wf-scale"].style.background =
       "linear-gradient(90deg," + WF_RAMP.join(",") + ")";
