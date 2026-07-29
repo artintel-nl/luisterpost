@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Birds — Luisterpost</title>
+<meta name="description" content="Live acoustic species detection at the Luisterpost listening post in Utrecht: which birds are calling in a city garden, when, and how often.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1c17;
+  --ink-inverse:#ece8dd;
+  --signal:#d9963f;
+  --tile:#171a14;
+  --paper:#f4f1e8;
+  --paper-sunk:#e9e5d9;
+  --rule:#d3cebe;
+  --rule-dark:#2b3026;
+  --muted:#6d6a5c;
+  --muted-dark:#8d9483;
+  --link:#8a5a1e;
+  --link-hover:#d9963f;
+  --oxide:#c2543a;
+  --olive:#7fa651;
+  --slate:#1f6f9c;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Archivo",system-ui,sans-serif;
+  background:var(--paper-sunk);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.55;
+  text-wrap:pretty;
+}
+a{color:var(--link);transition:color 200ms ease}
+a:hover{color:var(--link-hover)}
+a:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.mono{font-family:"JetBrains Mono",monospace}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
+.hdr{display:flex;align-items:center;gap:14px;padding:16px 24px;max-width:960px;margin:0 auto}
+.hdr img{width:30px;height:30px;display:block}
+.hdr .wordmark{font-weight:700;font-size:15px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-inverse);text-decoration:none}
+.hdr nav{margin-left:40px;display:flex;gap:20px}
+.hdr nav a{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-dark);text-decoration:none}
+.hdr nav a:hover,.hdr nav a[aria-current]{color:var(--ink-inverse)}
+.hdr .live{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--signal)}
+.hdr .live i{width:7px;height:7px;border-radius:50%;background:var(--signal);flex:none}
+.hdr .live.is-down{color:var(--muted-dark)}
+.hdr .live.is-down i{background:var(--muted-dark)}
+.hdr .live.is-live i{animation:beat 2s ease-in-out infinite}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.3}}
+@media (max-width:700px){.hdr nav{display:none}}
+
+.pagehead{padding:44px 0 26px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:block}
+.pagehead h1{font-weight:700;font-size:clamp(28px,4.6vw,42px);letter-spacing:-.015em;line-height:1.08}
+.pagehead .thesis{margin-top:12px;font-size:16px;line-height:1.5;max-width:34em;color:var(--muted)}
+.tick-sound{display:block;height:5px;width:64px;background:var(--slate);margin-bottom:16px}
+
+.readout{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.readout div{padding:18px;border-right:1px solid var(--rule)}
+.readout div:last-child{border-right:none}
+.readout dt{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.readout dd{font-family:"JetBrains Mono",monospace;font-size:26px;font-weight:500;line-height:1.15;font-variant-numeric:tabular-nums}
+.readout .sub{margin-top:6px;font-size:12px;color:var(--muted);line-height:1.4}
+.readout .name{font-family:"Archivo",sans-serif;font-size:19px;font-weight:600;line-height:1.25}
+@media (max-width:760px){.readout{grid-template-columns:1fr}.readout div{border-right:none;border-bottom:1px solid var(--rule)}}
+
+.card{border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.card-head{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule);font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.chartwrap{padding:14px 8px 6px}
+svg.chart{display:block;width:100%;height:auto}
+.gridline{stroke:var(--rule);stroke-width:1;stroke-dasharray:2 5}
+.axis{stroke:var(--rule);stroke-width:1}
+.axis-lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em;fill:var(--muted)}
+.hbar{fill:var(--slate)}
+.hbar-now{fill:var(--signal)}
+.chart-empty{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;fill:var(--muted);text-anchor:middle}
+.cap{padding:2px 16px 18px;font-size:13px;color:var(--muted);line-height:1.6;max-width:62em}
+
+/* species tally */
+.tally{padding:6px 16px 16px}
+.row{display:grid;grid-template-columns:minmax(150px,15em) 1fr 60px;gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid var(--paper-sunk)}
+.row:last-child{border-bottom:none}
+.row .nm{font-size:14px;font-weight:500}
+.row .sci{font-size:11.5px;color:var(--muted);font-style:italic}
+.row .barwrap{background:var(--paper-sunk);height:14px;position:relative}
+.row .bar{background:var(--slate);height:14px}
+.row .n{font-family:"JetBrains Mono",monospace;font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums}
+.row .kind{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-left:6px}
+@media (max-width:700px){.row{grid-template-columns:1fr 52px}.row .barwrap{grid-column:1/-1}}
+
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:9px 16px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:8px 16px;border-bottom:1px solid var(--paper-sunk);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td.t{font-family:"JetBrains Mono",monospace;color:var(--muted);font-variant-numeric:tabular-nums}
+td.c{font-family:"JetBrains Mono",monospace;text-align:right;font-variant-numeric:tabular-nums}
+td .sci{color:var(--muted);font-style:italic;font-size:11.5px;margin-left:8px}
+.tbl-empty{padding:22px 16px;text-align:center;color:var(--muted);font-size:12px;letter-spacing:.1em}
+
+.note{font-size:12.5px;color:var(--muted);margin-bottom:56px;max-width:48em}
+.note code{font-family:"JetBrains Mono",monospace;font-size:12px;background:var(--paper);padding:1px 5px;border:1px solid var(--rule)}
+.note p+p{margin-top:.8em}
+.note b{color:var(--ink);font-weight:600}
+
+footer{background:var(--tile);color:var(--muted-dark);padding:26px 0 44px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+footer a{color:var(--signal);text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <img src="../assets/mark-on-dark.svg" alt="" width="30" height="30">
+    <a class="wordmark" href="/">Luisterpost</a>
+    <nav aria-label="Live channels">
+      <a href="/aircraft/">Planes</a>
+      <a href="/drones/">Drones</a>
+      <a href="/radiation/">Radiation</a>
+      <a href="/birds/" aria-current="page">Birds</a>
+    </nav>
+    <span class="live mono is-down" id="conn"><i aria-hidden="true"></i><span id="conn-txt">CONNECTING</span></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="pagehead">
+    <span class="tick-sound" aria-hidden="true"></span>
+    <span class="eyebrow">Channel 04 · Sound 2–10 kHz · acoustic classification</span>
+    <h1>What is calling in the garden</h1>
+    <p class="thesis">A microphone under the eaves, listening continuously. Everything it hears is classified on the spot and only the name of the species is kept — the audio itself never leaves the house.</p>
+  </section>
+
+  <dl class="readout">
+    <div><dt>Species today</dt><dd id="r-species">—</dd><p class="sub" id="r-since">&nbsp;</p></div>
+    <div><dt>Detections today</dt><dd id="r-total">—</dd><p class="sub">each one a classified call</p></div>
+    <div><dt>Most recent</dt><dd class="name" id="r-last">—</dd><p class="sub" id="r-last-when">&nbsp;</p></div>
+  </dl>
+
+  <section class="card">
+    <div class="card-head"><span>When they call · today by hour</span><span id="hourly-note">&nbsp;</span></div>
+    <div class="chartwrap">
+      <svg class="chart" id="hourly" viewBox="0 0 900 240" role="img"
+           aria-label="Detections per hour of the day so far. The same counts are listed in the species table below.">
+        <g id="h-body"></g>
+        <text id="h-empty" class="chart-empty" x="450" y="110">Waiting for the first call…</text>
+      </svg>
+    </div>
+    <p class="cap">Birdsong is not spread evenly through a day. The dawn chorus is the loudest
+    hour of the garden's year-round routine, and it moves with the sunrise.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span>Who is about</span><span id="tally-note">today</span></div>
+    <div class="tally" id="tally"></div>
+    <div class="tbl-empty mono" id="tally-empty">Nothing classified yet today</div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span>Latest detections</span><span>most recent first</span></div>
+    <div style="overflow-x:auto">
+      <table>
+        <caption style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Most recent acoustic detections</caption>
+        <thead><tr><th scope="col">Time</th><th scope="col">Heard</th><th scope="col" style="text-align:right">Confidence</th></tr></thead>
+        <tbody id="feed"></tbody>
+      </table>
+      <div class="tbl-empty mono" id="feed-empty">Listening…</div>
+    </div>
+  </section>
+
+  <div class="note">
+    <p>Detections arrive on the public MQTT broker at <code>wss://live.luisterpost.io</code>.
+    Each one is published live on <code>luisterpost/sound/detection</code>, with the running
+    day on <code>luisterpost/sound/today</code> and the recent feed on
+    <code>luisterpost/sound/recent</code>.</p>
+
+    <p><b>The topic is <code>sound/</code>, not <code>birds/</code>, on purpose.</b> This is an
+    acoustic channel that currently runs a bird classifier; the microphone, the model and the
+    computer behind it are all expected to change, and church-bell identification is likely to
+    join it. So every detection carries a <code>class</code> — <code>"bird"</code> today — and a
+    consumer branches on that rather than on what hardware happens to be in the garden:</p>
+
+    <p style="margin-top:.5em"><code>{"class":"bird","label":"Great Tit","scientific":"Parus major","confidence":0.94,"ts":"…"}</code></p>
+
+    <p>A bell would arrive as <code>{"class":"bell","label":"Domtoren",…}</code> on the same
+    topic, with <code>scientific</code> simply absent — a bell has no binomial name. Nothing in
+    the public feed names the classifier, the model version or the machine, so replacing any of
+    them breaks nothing downstream.</p>
+
+    <p>Confidence is the classifier's own score, not a probability that the bird was there.
+    Common garden species score high because the model has heard a great many of them; a
+    quiet or unusual visitor can be real at a low score, and a passing noise can occasionally
+    score well. The counts are of <em>detections</em>, not of birds — one persistent blue tit
+    at dawn can account for a great many of them.</p>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Luisterpost · Utrecht NL · 52.09°N 5.12°E</span>
+    <span>Code MIT · Data CC BY 4.0 · <a href="https://github.com/artintel-nl/luisterpost">GitHub</a></span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"
+        integrity="sha384-u4uqeACkFcoKl57rBQJHVGDd1pqhW4w8X3WjTu1ZksPdxoLqdt34jpoNkJisE25W"
+        crossorigin="anonymous"></script>
+<script>
+(function () {
+  "use strict";
+  var BROKER = "wss://live.luisterpost.io/";
+  var els = {};
+  ["conn","conn-txt","r-species","r-total","r-last","r-last-when","r-since",
+   "h-body","h-empty","hourly-note","tally","tally-empty","tally-note",
+   "feed","feed-empty"].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  function svg(tag, attrs) {
+    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function hhmm(ts) {
+    var d = new Date(ts);
+    if (isNaN(d)) return "";
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  // ---- hourly ---------------------------------------------------------------
+  function renderHourly(hourly) {
+    if (!Array.isArray(hourly) || hourly.length !== 24) return;
+    var total = hourly.reduce(function (a, b) { return a + b; }, 0);
+    els["h-empty"].style.display = total ? "none" : "";
+    if (!total) return;
+    var W = 900, H = 240, L = 44, R = 14, T = 14, B = 40;
+    var pw = W - L - R, ph = H - T - B;
+    var max = Math.max.apply(null, hourly);
+    var bw = pw / 24;
+    var nowH = new Date().getHours();
+    var g = els["h-body"]; g.textContent = "";
+
+    // Integer ticks only. Counts are whole detections, and early in the day the peak
+    // may be 1 — fractional gridlines then round to "1, 1, 0", which reads as broken.
+    var step = Math.max(1, Math.ceil(max / 2));
+    for (var v = 0; v <= max; v += step) {
+      var y = T + ph - v / max * ph;
+      g.appendChild(svg("line", { class: "gridline", x1: L, x2: L + pw, y1: y, y2: y }));
+      var yl = svg("text", { class: "axis-lbl", x: L - 8, y: y + 3, "text-anchor": "end" });
+      yl.textContent = v;
+      g.appendChild(yl);
+    }
+    for (var h = 0; h < 24; h++) {
+      var hgt = hourly[h] / max * ph;
+      if (hgt > 0) {
+        g.appendChild(svg("rect", { class: h === nowH ? "hbar-now" : "hbar",
+          x: L + h * bw + 2, y: T + ph - hgt, width: Math.max(1, bw - 4), height: hgt }));
+      }
+      if (h % 3 === 0) {
+        var xl = svg("text", { class: "axis-lbl", x: L + h * bw + bw / 2,
+                               y: T + ph + 17, "text-anchor": "middle" });
+        xl.textContent = String(h).padStart(2, "0");
+        g.appendChild(xl);
+      }
+    }
+    g.appendChild(svg("line", { class: "axis", x1: L, x2: L + pw, y1: T + ph, y2: T + ph }));
+    var ul = svg("text", { class: "axis-lbl", x: L + pw, y: T + ph + 33, "text-anchor": "end" });
+    ul.textContent = "hour of day";
+    g.appendChild(ul);
+    els["hourly-note"].textContent = "peak " + max + " at " +
+      String(hourly.indexOf(max)).padStart(2, "0") + ":00";
+  }
+
+  // ---- species tally --------------------------------------------------------
+  function renderTally(items) {
+    var box = els.tally;
+    box.textContent = "";
+    els["tally-empty"].style.display = items && items.length ? "none" : "";
+    if (!items || !items.length) return;
+    var max = items[0].count || 1;
+    items.forEach(function (it) {
+      var row = document.createElement("div"); row.className = "row";
+
+      var name = document.createElement("div");
+      var nm = document.createElement("div"); nm.className = "nm";
+      nm.textContent = it.label;
+      // Anything that is not a bird is badged, so the day a bell appears the page
+      // does not silently present it as a species.
+      if (it["class"] && it["class"] !== "bird") {
+        var kd = document.createElement("span"); kd.className = "kind";
+        kd.textContent = it["class"]; nm.appendChild(kd);
+      }
+      name.appendChild(nm);
+      if (it.scientific) {
+        var sc = document.createElement("div"); sc.className = "sci";
+        sc.textContent = it.scientific; name.appendChild(sc);
+      }
+      row.appendChild(name);
+
+      var bw = document.createElement("div"); bw.className = "barwrap";
+      var b = document.createElement("div"); b.className = "bar";
+      b.style.width = Math.max(2, it.count / max * 100) + "%";
+      bw.appendChild(b); row.appendChild(bw);
+
+      var n = document.createElement("div"); n.className = "n";
+      n.textContent = it.count; row.appendChild(n);
+      box.appendChild(row);
+    });
+  }
+
+  // ---- recent feed ----------------------------------------------------------
+  function renderFeed(items) {
+    var tb = els.feed;
+    tb.textContent = "";
+    els["feed-empty"].style.display = items && items.length ? "none" : "";
+    if (!items) return;
+    items.slice(0, 25).forEach(function (it) {
+      var tr = document.createElement("tr");
+      var td1 = document.createElement("td"); td1.className = "t";
+      td1.textContent = hhmm(it.ts); tr.appendChild(td1);
+      var td2 = document.createElement("td");
+      td2.appendChild(document.createTextNode(it.label || "—"));
+      if (it.scientific) {
+        var s = document.createElement("span"); s.className = "sci";
+        s.textContent = it.scientific; td2.appendChild(s);
+      }
+      tr.appendChild(td2);
+      var td3 = document.createElement("td"); td3.className = "c";
+      td3.textContent = it.confidence != null ? it.confidence.toFixed(2) : "—";
+      tr.appendChild(td3);
+      tb.appendChild(tr);
+    });
+  }
+
+  // ---- live -----------------------------------------------------------------
+  function setConn(s, txt) { els.conn.className = "live mono " + s; els["conn-txt"].textContent = txt; }
+  setConn("is-down", "CONNECTING");
+  var client = mqtt.connect(BROKER, {
+    clientId: "luisterpost-birds-" + Math.random().toString(16).slice(2, 10),
+    keepalive: 45, reconnectPeriod: 4000, clean: true
+  });
+  client.on("connect", function () {
+    setConn("is-live", "LISTENING");
+    client.subscribe("luisterpost/sound/today");
+    client.subscribe("luisterpost/sound/recent");
+    client.subscribe("luisterpost/sound/detection");
+    client.subscribe("luisterpost/station/status");
+  });
+  client.on("reconnect", function () { setConn("is-down", "RECONNECTING"); });
+  client.on("close",     function () { setConn("is-down", "OFFLINE"); });
+  client.on("error",     function () { setConn("is-down", "ERROR"); });
+
+  client.on("message", function (topic, payload) {
+    var d;
+    try { d = JSON.parse(payload.toString()); } catch (e) { return; }
+
+    if (topic === "luisterpost/sound/today") {
+      if (isFinite(d.labels)) els["r-species"].textContent = d.labels;
+      if (isFinite(d.detections)) els["r-total"].textContent = d.detections;
+      // The tally is kept in memory, so after a restart it covers part of a day.
+      // Say so rather than implying a full one.
+      if (d.since) {
+        var s = new Date(d.since * 1000);
+        var midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+        els["r-since"].textContent = (s > midnight)
+          ? "counting since " + hhmm(s) : "since midnight";
+      }
+      renderHourly(d.hourly);
+      renderTally(d.items);
+      return;
+    }
+    if (topic === "luisterpost/sound/recent") {
+      renderFeed(d.items);
+      if (d.items && d.items.length) {
+        els["r-last"].textContent = d.items[0].label || "—";
+        els["r-last-when"].textContent = d.items[0].ts ? "at " + hhmm(d.items[0].ts) : "";
+      }
+      return;
+    }
+    if (topic === "luisterpost/sound/detection") {
+      els["r-last"].textContent = d.label || "—";
+      els["r-last-when"].textContent = d.ts ? "at " + hhmm(d.ts) : "just now";
+      return;
+    }
+    if (topic === "luisterpost/station/status" && d.online === false) {
+      setConn("is-down", "STATION OFFLINE");
+    }
+  });
+})();
+</script>
+</body>
+</html>
