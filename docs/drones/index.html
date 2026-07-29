@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Drones — Remote ID — Luisterpost</title>
-<meta name="description" content="Live EU/ASTM Remote ID reception at the Luisterpost listening post in Utrecht: how many drone beacons are audible and how strong they are, published as counts only.">
+<meta name="description" content="Live EU/ASTM Remote ID reception at the Luisterpost listening post in Utrecht: how many drones are broadcasting and where they are relative to the post. Counts and relative geometry only — no absolute positions, no operator or pilot data.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -130,7 +130,7 @@ footer a{color:var(--signal);text-decoration:none}
     <span class="tick-radio" aria-hidden="true"></span>
     <span class="eyebrow">Channel 02 · Remote ID · Radio 2.4 GHz</span>
     <h1>Who is broadcasting overhead</h1>
-    <p class="thesis">European and ASTM rules require most drones to broadcast their identity continuously, in the clear, over WiFi and Bluetooth. Two ESP32-S3 boards in the garden listen for those beacons. This page reports how many are audible and how close — and nothing else.</p>
+    <p class="thesis">European and ASTM rules require most drones to broadcast their identity continuously, in the clear, over WiFi and Bluetooth. Two ESP32-S3 boards in the garden listen for those beacons. This page reports how many are broadcasting and where they are relative to the post — and nothing else.</p>
   </section>
 
   <dl class="now">
@@ -142,15 +142,16 @@ footer a{color:var(--signal);text-decoration:none}
     <div>
       <dt>Plausibly nearby</dt>
       <div class="now-val" id="near">—</div>
-      <p class="now-sub">stronger than <span id="thresh">−70</span> dBm</p>
+      <p class="now-sub">within <span id="thresh">1</span> km of the post, by their own GPS</p>
     </div>
     <div class="now-ctx">
       <p>Remote ID beacons carry for kilometres, so most of what a receiver hears is nowhere
       near it. The large number is <b>not</b> a count of drones overhead — it is the number of
       distinct airframes whose beacons reached this garden, most of them faintly, from across
       the city and beyond.</p>
-      <p style="margin-top:.6em">The smaller number is the honest one: how many were loud
-      enough to plausibly be close.</p>
+      <p style="margin-top:.6em">A Remote ID beacon carries the drone's own GPS fix, so the
+      second figure is a real distance rather than a guess from signal strength — which is a
+      poor proxy anyway, since a drone behind a chimney reads faint at fifty metres.</p>
     </div>
   </dl>
 
@@ -173,18 +174,21 @@ footer a{color:var(--signal);text-decoration:none}
   </section>
 
   <section class="card">
-    <div class="card-head"><span>Signal strength distribution</span><span>right = closer</span></div>
-    <div class="chartwrap">
-      <svg class="chart" id="rssi" viewBox="0 0 900 260" role="img"
-           aria-label="How many broadcasters fall into each signal-strength band. Weaker signals are further away.">
-        <g id="r-body"></g>
-        <text id="r-empty" class="chart-empty" x="470" y="120">Waiting…</text>
+    <div class="card-head">
+      <span>Where they are · range &amp; bearing from the post</span>
+      <span id="loc-note">5 km radius</span>
+    </div>
+    <div class="chartwrap" style="display:flex;justify-content:center">
+      <svg class="chart" id="scope" viewBox="0 0 700 700" style="max-width:520px" role="img"
+           aria-label="Polar plot of drones currently broadcasting, by range and bearing from the listening post. Positions are relative to the post; no absolute coordinates are published.">
+        <g id="s-grid"></g>
+        <g id="s-marks"></g>
+        <text id="s-empty" class="chart-empty" x="350" y="350">No drones broadcasting</text>
       </svg>
     </div>
-    <p class="cap">Signal strength is the only distance cue published here, and it is a rough
-    one — a drone behind a building reads weak whether it is near or far. The distribution is
-    the useful part: a long tail at the weak end means the receiver is hearing the whole city,
-    not the garden.</p>
+    <p class="cap">Each mark is one airframe, placed by the GPS fix in its own beacon —
+    <b>relative to this post, not on a map</b>. Range and bearing tell you what is flying
+    nearby without publishing where anything actually is, including the post itself.</p>
   </section>
 
   <section class="withheld">
@@ -197,11 +201,14 @@ footer a{color:var(--signal);text-decoration:none}
       <li>the airframe serial number and any registered operator ID</li>
       <li>the transmitter's MAC address</li>
     </ul>
-    <p style="margin-top:.8em">None of it leaves the house. The station's publisher consumes
-    those messages to maintain a count and a signal-strength histogram, and returns nothing —
-    the raw fields are never republished, never logged to the public feed, and never reach this
-    page. The public topic <code>luisterpost/drones/count</code> contains integers and nothing
-    else.</p>
+    <p style="margin-top:.8em">None of it leaves the house. The publisher consumes those
+    messages, converts each drone's position into a range and bearing <em>from the post</em>,
+    and discards the rest — the absolute coordinates, the pilot's location, the serial and the
+    MAC are never republished and never reach this page.</p>
+    <p>The relative form matters for two reasons. It says nothing about where anyone is: a
+    bearing and a distance from an unstated origin locate nothing. And it protects the post
+    too — drones fly close to the house, so publishing their true coordinates would pin this
+    station far more precisely than the city-level position it publishes on purpose.</p>
     <p>That is a deliberate limit rather than an oversight. Publishing drone tracks would mean
     publishing the movements of identifiable people who have no say in it, which is a different
     thing from publishing the weather.</p>
@@ -213,8 +220,10 @@ footer a{color:var(--signal);text-decoration:none}
     The receiver is two XIAO ESP32-S3 boards watching WiFi and Bluetooth advertisements; its
     own liveness is on <code>luisterpost/drones/status</code>.</p>
     <p>A broadcaster is counted once per five-minute window no matter how many beacons it
-    sends. Airframes that change MAC address between windows may be counted more than once,
-    so the figure is an upper bound on distinct aircraft.</p>
+    sends. Only live receptions count: the scanner also keeps a stored record of every airframe
+    it has ever heard — thousands of them — and replaying that inventory is not the same as
+    something being overhead now. Airframes that change MAC address between windows may be
+    counted more than once, so the figure is an upper bound.</p>
   </div>
 
 </main>
@@ -238,8 +247,8 @@ footer a{color:var(--signal);text-decoration:none}
 
   var points = [];
   var els = {};
-  ["c-grid","c-area","c-heard","c-near","c-key","c-empty","r-body","r-empty",
-   "heard","near","win","thresh","conn","conn-txt","hist-note"]
+  ["c-grid","c-area","c-heard","c-near","c-key","c-empty","s-grid","s-marks","s-empty",
+   "heard","near","win","thresh","conn","conn-txt","hist-note","loc-note"]
     .forEach(function (id) { els[id] = document.getElementById(id); });
 
   function svg(tag, attrs) {
@@ -297,41 +306,67 @@ footer a{color:var(--signal);text-decoration:none}
     els["hist-note"].textContent = points.length + " min";
   }
 
-  // ---- signal strength histogram -------------------------------------------
-  function renderRssi(h) {
-    var body = els["r-body"];
-    if (!h || !Array.isArray(h.counts) || !h.counts.length) return;
-    body.textContent = "";
-    els["r-empty"].style.display = "none";
-    var RW = 900, RH = 260, RL = 52, RR = 18, RT = 16, RB = 46;
-    var rpw = RW - RL - RR, rph = RH - RT - RB;
-    var n = h.counts.length;
-    var max = Math.max.apply(null, h.counts.concat([1]));
-    var bw = rpw / n;
-    for (var i = 0; i < n; i++) {
-      var hgt = h.counts[i] / max * rph;
-      // Nearer signals (the right-hand bins) get the accent, matching the
-      // "plausibly nearby" figure at the top of the page.
-      var near = h.edges[i] >= -70;
-      body.appendChild(svg("rect", { class: near ? "bar-near" : "bar",
-        x: RL + i * bw + 2, y: RT + rph - hgt, width: Math.max(1, bw - 4), height: hgt }));
-      if (h.counts[i] > 0) {
-        var vl = svg("text", { class: "bar-lbl", x: RL + i * bw + bw / 2,
-                               y: RT + rph - hgt - 5, "text-anchor": "middle" });
-        vl.textContent = h.counts[i];
-        body.appendChild(vl);
-      }
-      var el = svg("text", { class: "axis-lbl", x: RL + i * bw + bw / 2,
-                             y: RT + rph + 18, "text-anchor": "middle" });
-      el.textContent = h.edges[i];
-      body.appendChild(el);
-    }
-    body.appendChild(svg("line", { class: "axis", x1: RL, x2: RL + rpw,
-                                   y1: RT + rph, y2: RT + rph }));
-    var ul = svg("text", { class: "axis-lbl", x: RL + rpw, y: RT + rph + 36,
-                           "text-anchor": "end" });
-    ul.textContent = "signal strength dBm";
-    body.appendChild(ul);
+  // ---- where they are ------------------------------------------------------
+  // Polar, centred on the post. The feed carries range and bearing only — the
+  // publisher converts each drone's GPS fix into relative geometry and throws the
+  // coordinates away — so this plot cannot be turned back into a map of anywhere.
+  var VIEW_KM = 5, RINGS = [1, 2, 3, 5];
+  var SS = 700, SC = 350, SRAD = 290;
+
+  (function drawScopeGrid() {
+    var g = els["s-grid"];
+    RINGS.forEach(function (km) {
+      g.appendChild(svg("circle", { class: "gridline", cx: SC, cy: SC,
+                                    r: km / VIEW_KM * SRAD, fill: "none" }));
+      var lb = svg("text", { class: "axis-lbl", x: SC + 5,
+                             y: SC - km / VIEW_KM * SRAD - 5 });
+      lb.textContent = km + " KM";
+      g.appendChild(lb);
+    });
+    [45, 135].forEach(function (deg) {
+      var a = deg * Math.PI / 180;
+      g.appendChild(svg("line", { class: "gridline",
+        x1: SC - Math.sin(a) * SRAD, y1: SC + Math.cos(a) * SRAD,
+        x2: SC + Math.sin(a) * SRAD, y2: SC - Math.cos(a) * SRAD }));
+    });
+    [["N", 0], ["E", 90], ["S", 180], ["W", 270]].forEach(function (c) {
+      var a = c[1] * Math.PI / 180, r = SRAD + 20;
+      var tx = svg("text", { class: "axis-lbl", x: SC + Math.sin(a) * r,
+                             y: SC - Math.cos(a) * r + 4, "text-anchor": "middle" });
+      tx.textContent = c[0];
+      g.appendChild(tx);
+    });
+    // the post itself
+    var m = svg("g", { transform: "translate(" + SC + "," + SC + ")", opacity: ".85" });
+    m.appendChild(svg("path", { d: "M0 7 V -4", stroke: "#1a1c17", "stroke-width": 2.2,
+                                fill: "none", "stroke-linecap": "round" }));
+    m.appendChild(svg("path", { d: "M-6 7 H 6", stroke: "#1a1c17", "stroke-width": 2.2,
+                                fill: "none", "stroke-linecap": "round" }));
+    m.appendChild(svg("circle", { cx: 0, cy: -7.5, r: 2.6, fill: "#1a1c17" }));
+    g.appendChild(m);
+  })();
+
+  function renderPositions(list, nearKm) {
+    var g = els["s-marks"];
+    g.textContent = "";
+    var shown = (list || []).filter(function (p) {
+      return isFinite(p.km) && isFinite(p.bearing);
+    });
+    els["s-empty"].style.display = shown.length ? "none" : "";
+    var off = 0;
+    shown.forEach(function (p) {
+      if (p.km > VIEW_KM) { off++; return; }
+      var a = p.bearing * Math.PI / 180;
+      var r = p.km / VIEW_KM * SRAD;
+      var x = SC + Math.sin(a) * r, y = SC - Math.cos(a) * r;
+      var near = nearKm != null && p.km <= nearKm;
+      g.appendChild(svg("circle", { cx: x, cy: y, r: 6,
+        fill: near ? "#1f6f9c" : "#c2543a", stroke: "#f4f1e8", "stroke-width": 2 }));
+      var lb = svg("text", { class: "axis-lbl", x: x + 10, y: y - 8 });
+      lb.textContent = p.km.toFixed(1) + " km · " + String(Math.round(p.bearing)).padStart(3, "0") + "°";
+      g.appendChild(lb);
+    });
+    els["loc-note"].textContent = VIEW_KM + " km radius" + (off ? " · " + off + " beyond" : "");
   }
 
   // ---- live ----------------------------------------------------------------
@@ -361,10 +396,8 @@ footer a{color:var(--signal);text-decoration:none}
       if (isFinite(d.broadcasters_heard)) els.heard.textContent = d.broadcasters_heard;
       if (isFinite(d.nearby)) els.near.textContent = d.nearby;
       if (isFinite(d.window_s)) els.win.textContent = Math.round(d.window_s / 60);
-      if (isFinite(d.nearby_rssi_threshold)) {
-        els.thresh.textContent = String(d.nearby_rssi_threshold).replace("-", "−");
-      }
-      if (d.rssi) renderRssi(d.rssi);
+      if (isFinite(d.nearby_km)) els.thresh.textContent = d.nearby_km;
+      renderPositions(d.positions, d.nearby_km);
       return;
     }
     if (topic === "luisterpost/drones/history") {
