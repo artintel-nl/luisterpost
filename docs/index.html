@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Luisterpost — a listening post in a Utrecht city garden</title>
-<meta name="description" content="One house in Utrecht listening to its environment across four physical media: sound, radio, light and gamma radiation. Birdsong, aircraft, lightning, drones and background radiation — open code and open data.">
+<meta name="description" content="One house in Utrecht listening to its environment across five physical media: sound, radio, light, gamma radiation and the air itself. Birdsong, aircraft, lightning, drones and background radiation — open code and open data.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,6 +27,11 @@
   --oxide:#c2543a;
   --olive:#7fa651;
   --slate:#5b8fb0;
+  /* Fifth medium: matter. Violet because amber collided with --signal, which
+     means LIVE elsewhere on this page; purple is also the conventional hue for
+     particulates in air-quality scales. Checked for CVD separation against the
+     other four bands and against --signal. */
+  --violet:#6b4f96;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -78,7 +83,7 @@ header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
 /* ---------- band chart ---------- */
 .chart{border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
 .chart-head{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule);font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
-.bands{display:grid;grid-template-columns:repeat(4,1fr)}
+.bands{display:grid;grid-template-columns:repeat(5,1fr)}
 .band{padding:18px 14px 22px;border-right:1px solid var(--rule);text-decoration:none;color:var(--ink)}
 .band:last-child{border-right:none}
 a.band:hover{background:var(--paper-sunk)}
@@ -89,6 +94,8 @@ a.band:hover{background:var(--paper-sunk)}
 .t-radio{background:var(--oxide)}
 .t-light{background:repeating-linear-gradient(90deg,var(--olive) 0 10px,transparent 10px 16px)}
 .t-gamma{background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 8px)}
+/* Stippled, because this medium arrives as particles rather than as a wave. */
+.t-air{background:radial-gradient(circle at 3px 50%,var(--violet) 1.7px,transparent 1.8px) 0 0/7px 100% repeat-x}
 .band h2{font-size:16px;font-weight:600}
 .band .nl{font-size:12.5px;color:var(--muted);font-style:italic}
 .band .range{margin-top:8px;font-size:11px;letter-spacing:.14em;color:var(--muted)}
@@ -110,16 +117,22 @@ a.band:hover{background:var(--paper-sunk)}
 .channel h3{font-size:15px;font-weight:600}
 .channel .desc{font-size:13px;color:var(--muted);line-height:1.5;margin-top:2px}
 .channel .medium{font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+/* Units opt out: uppercasing 'µm' yields 'MM' — millimetres, not micrometres. */
+.channel .medium .unit{text-transform:none}
 .md-sound{color:var(--slate)}
 .md-radio{color:var(--oxide)}
 .md-light{color:var(--olive)}
 .md-gamma{color:var(--ink)}
+.md-air{color:var(--violet)}
 .md-mixed{color:var(--muted)}
 .status{font-size:11px;letter-spacing:.14em;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:7px}
 .s-live{color:var(--ink)}
 .s-live i{width:7px;height:7px;border-radius:50%;background:var(--signal);flex:none}
 .s-plan{color:var(--muted)}
 .s-plan i{width:7px;height:7px;border-radius:50%;border:1px solid var(--muted);flex:none}
+/* Built and running, but not yet in its final place — neither LIVE nor PLANNED. */
+.s-test{color:var(--muted)}
+.s-test i{width:7px;height:7px;border-radius:50%;background:var(--violet);flex:none}
 @media (max-width:760px){
   .bands{grid-template-columns:1fr 1fr}
   .band{border-bottom:1px solid var(--rule)}
@@ -180,8 +193,8 @@ footer a{color:var(--signal);text-decoration:none}
     </div>
   </section>
 
-  <section class="chart" aria-label="The four bands the station receives on">
-    <div class="chart-head"><span>Receiving bands</span><span>4 media · 4 live channels</span></div>
+  <section class="chart" aria-label="The five media the station receives on">
+    <div class="chart-head"><span>Receiving bands</span><span>5 media · 4 live channels</span></div>
     <div class="bands">
       <a class="band" href="#ch04">
         <span class="tick t-sound" aria-hidden="true"></span>
@@ -207,9 +220,15 @@ footer a{color:var(--signal);text-decoration:none}
         <p class="range mono">0.05 – 3 MEV</p>
         <p class="what">Ionizing radiation: cosmic rays, radon washout, the background itself.</p>
       </a>
+      <a class="band" href="#ch05">
+        <span class="tick t-air" aria-hidden="true"></span>
+        <h2>Air</h2><span class="nl">lucht</span>
+        <p class="range mono">0.3 – 10 µm</p>
+        <p class="what">Matter rather than waves: dust, smoke and pollen arriving, and what the city leaves in the air.</p>
+      </a>
     </div>
   </section>
-  <p class="chart-note">The station receives on four physical media. Four channels are published live so far — the rest of the instruments report into the station’s own logs.</p>
+  <p class="chart-note">The station receives on five physical media. Four channels are published live so far — the rest of the instruments report into the station’s own logs.</p>
 
   <section class="prose">
     <p>A luisterpost is what the Dutch military called a signals intercept station — a room full of receivers, pointed at whatever was passing through the air. This one is not on a border or a hilltop. It is an ordinary house in Utrecht, fitted over the years with microphones, antennas, particle detectors and weather instruments, all reporting into one small MQTT broker in the meter cupboard.</p>
@@ -245,6 +264,13 @@ footer a{color:var(--signal);text-decoration:none}
       <div><h3>Birds</h3><p class="desc">Acoustic species classification from a microphone under the eaves — every call named on the spot, the audio never kept. The channel is built to take other sounds later, church bells among them. <a href="/birds/">Hear what is about right now →</a></p></div>
       <span class="medium mono md-sound">Sound 2–10 kHz</span>
       <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch05">
+      <span class="ch mono">CH 05</span>
+      <div><h3>Air quality</h3><p class="desc">Particulates, volatile compounds and nitrogen oxides from a Sensirion SEN55 in the garden. Built and running on the bench; it publishes once it is outside in its housing, because until then it would be reporting a room rather than the air.</p></div>
+      <span class="medium mono md-air">Particle count <span class="unit">0.3–10 µm</span></span>
+      <span class="status mono s-test"><i aria-hidden="true"></i>IN TEST</span>
     </div>
   </section>
 
