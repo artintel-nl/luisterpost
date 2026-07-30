@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Air — Luisterpost</title>
+<meta name="description" content="Channel 05 of the Luisterpost listening post in Utrecht: particulates, volatile compounds and nitrogen oxides from a Sensirion SEN55. Built and in test, not yet reporting.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1c17;
+  --ink-inverse:#ece8dd;
+  --signal:#d9963f;
+  --tile:#171a14;
+  --paper:#f4f1e8;
+  --paper-sunk:#e9e5d9;
+  --rule:#d3cebe;
+  --rule-dark:#2b3026;
+  --muted:#6d6a5c;
+  --muted-dark:#8d9483;
+  --link:#8a5a1e;
+  --link-hover:#d9963f;
+  --oxide:#c2543a;
+  --olive:#7fa651;
+  --slate:#1f6f9c;
+  --violet:#6b4f96;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Archivo",system-ui,sans-serif;
+  background:var(--paper-sunk);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.55;
+  text-wrap:pretty;
+}
+a{color:var(--link);transition:color 200ms ease}
+a:hover{color:var(--link-hover)}
+a:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.mono{font-family:"JetBrains Mono",monospace}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
+.hdr{display:flex;align-items:center;gap:14px;padding:16px 24px;max-width:960px;margin:0 auto}
+.hdr img{width:30px;height:30px;display:block}
+.hdr .wordmark{font-weight:700;font-size:15px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-inverse);text-decoration:none}
+.hdr nav{margin-left:40px;display:flex;gap:20px}
+.hdr nav a{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-dark);text-decoration:none}
+.hdr nav a:hover,.hdr nav a[aria-current]{color:var(--ink-inverse)}
+.hdr .live{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--muted-dark)}
+.hdr .live i{width:7px;height:7px;border-radius:50%;background:var(--violet);flex:none}
+@media (max-width:700px){.hdr nav{display:none}}
+
+.pagehead{padding:44px 0 26px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:block}
+.eyebrow .unit{text-transform:none}
+.pagehead h1{font-weight:700;font-size:clamp(28px,4.6vw,42px);letter-spacing:-.015em;line-height:1.08}
+.pagehead .thesis{margin-top:12px;font-size:16px;line-height:1.5;max-width:34em;color:var(--muted)}
+.tick-air{display:block;height:5px;width:64px;background:radial-gradient(circle at 3px 50%,var(--violet) 1.7px,transparent 1.8px) 0 0/7px 100% repeat-x;margin-bottom:16px}
+
+.state{border:1px solid var(--rule);background:var(--paper);padding:24px;margin-bottom:10px;border-left:4px solid var(--violet)}
+.state h2{font-size:16px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.state h2 i{width:9px;height:9px;border-radius:50%;background:var(--violet);flex:none}
+.state p{font-size:14px;color:var(--muted);max-width:52em;line-height:1.6}
+.state p+p{margin-top:.7em}
+.state b{color:var(--ink);font-weight:600}
+
+.card{border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.card-head{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule);font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.card-head .unit{text-transform:none}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:9px 16px;border-bottom:1px solid var(--rule)}
+th .unit{text-transform:none}
+td{padding:9px 16px;border-bottom:1px solid var(--paper-sunk);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.m{font-family:"JetBrains Mono",monospace;font-size:12.5px;white-space:nowrap}
+td.u{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.prose{max-width:40em;margin:0 0 12px}
+.prose h2{font-size:16px;font-weight:600;margin:26px 0 8px}
+.prose p{font-size:14px;color:var(--muted);line-height:1.6}
+.prose p+p{margin-top:.7em}
+.prose b{color:var(--ink);font-weight:600}
+.prose code{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:var(--paper);padding:1px 5px;border:1px solid var(--rule)}
+.note{font-size:12.5px;color:var(--muted);margin:20px 0 56px;max-width:46em}
+
+footer{background:var(--tile);color:var(--muted-dark);padding:26px 0 44px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+footer a{color:var(--signal);text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <img src="../assets/mark-on-dark.svg" alt="" width="30" height="30">
+    <a class="wordmark" href="/">Luisterpost</a>
+    <nav aria-label="Live channels">
+      <a href="/aircraft/">Planes</a>
+      <a href="/drones/">Drones</a>
+      <a href="/radiation/">Radiation</a>
+      <a href="/birds/">Birds</a>
+      <a href="/air/" aria-current="page">Air</a>
+    </nav>
+    <span class="live mono"><i aria-hidden="true"></i>IN TEST</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="pagehead">
+    <span class="tick-air" aria-hidden="true"></span>
+    <span class="eyebrow">Channel 05 · Particle count <span class="unit">0.3–10 µm</span> · Sensirion SEN55</span>
+    <h1>What the air carries</h1>
+    <p class="thesis">The fifth medium is the only one made of matter. Sound, radio, light and gamma pass over the station and are gone; dust, pollen and smoke arrive and stay a while.</p>
+  </section>
+
+  <section class="state">
+    <h2><i aria-hidden="true"></i>Not reporting yet</h2>
+    <p>The instrument is built and running — but it is on a bench <b>indoors</b>, and this page
+    will not publish a reading until it is outside in its housing.</p>
+    <p>That is a deliberate limit rather than an unfinished one. A sensor on a desk measures a
+    room: its temperature, its humidity, whatever is in its air. Presenting that as garden air
+    would be false, and publishing the inside of a house is a different thing from publishing
+    the weather. The station has withdrawn an indoor air channel once already for the same
+    reason.</p>
+    <p>There is a second reason to wait. The VOC and NOx readings are scored against a baseline
+    the sensor <b>learns over about a day</b>. A baseline learned indoors would travel outside
+    with it and quietly skew the first days of real data. It needs to learn the garden.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span>What will appear here</span><span>when it is outside</span></div>
+    <table>
+      <thead><tr><th scope="col">Measurement</th><th scope="col">Unit</th><th scope="col">What it is</th></tr></thead>
+      <tbody>
+        <tr><td class="m">PM1 · PM2.5 · PM4 · PM10</td><td class="u">µg/m³</td>
+            <td>Particulate mass by size. PM2.5 is the fraction with the clearest health guidance behind it, and the one that travels furthest — Saharan dust and wood smoke both show up here.</td></tr>
+        <tr><td class="m">Temperature</td><td class="u">°C</td>
+            <td>Garden air, in the shade, in a housing designed not to trap the sensor's own heat.</td></tr>
+        <tr><td class="m">Humidity</td><td class="u">%RH</td>
+            <td>Also the correction term for the particulate readings, which inflate in damp air as particles take on water.</td></tr>
+        <tr><td class="m">VOC index</td><td class="u">1–500</td>
+            <td><b>An index, not a concentration.</b> 100 is the baseline of roughly the last day; higher means more volatile organic compounds than has lately been normal here.</td></tr>
+        <tr><td class="m">NOx index</td><td class="u">1–500</td>
+            <td><b>Also an index.</b> Sensitive to oxidising gases — in a city that mostly means traffic. It is not µg/m³ of NO₂ and cannot be converted to it.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="prose">
+    <h2>Why indices and not concentrations</h2>
+    <p>Metal-oxide gas sensors measure a change in electrical resistance as molecules adsorb
+    onto a heated surface. That change is real and repeatable, but it has no fixed relationship
+    to a concentration in µg/m³ — the response depends on which compounds are present, on
+    humidity, and on the sensor's own history. So the honest output is a relative index against
+    a learned baseline, which is what Sensirion publish and what this page will show.</p>
+    <p>Absolute NO₂ is achievable, with an electrochemical cell and calibration against a
+    reference station. There is a national monitoring station about a kilometre from here, which
+    makes that a real possibility rather than a wish. It is not what this sensor does.</p>
+
+    <h2>Where it has to live</h2>
+    <p>The particulate sensor draws air through itself with a small fan, so it cannot be sealed
+    into a weatherproof box — a sealed sensor measures the box. It sits instead in shaded,
+    sheltered ambient air with its inlet facing down, while the electronics live in a separate
+    sealed enclosure <b>above</b> it, because warm air rises and would otherwise drift over the
+    sensor.</p>
+    <p>Condensation is the real hazard rather than rain. Rain is stopped by pointing the
+    openings downward; condensation forms inside, on cold optics, and degrades the laser path
+    permanently.</p>
+    <p>Even the housing material matters. Soft plastics and fresh 3D prints outgas volatile
+    compounds — enough that a new enclosure will read as polluted air for a fortnight. Since the
+    VOC index is measured against a learned baseline, a slowly-decaying source like that drags
+    the baseline along with it and hides its own error.</p>
+  </div>
+
+  <div class="note">
+    When this channel goes live it will publish on the same public broker as the others, at
+    <code>wss://live.luisterpost.io</code>. Until then it reports only to the station's own
+    logs, and the channel is marked <b>in test</b> in the log on the front page.
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Luisterpost · Utrecht NL · 52.09°N 5.12°E</span>
+    <span>Code MIT · Data CC BY 4.0 · <a href="https://github.com/artintel-nl/luisterpost">GitHub</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
