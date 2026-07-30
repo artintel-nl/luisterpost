@@ -161,6 +161,7 @@ footer a{color:var(--signal);text-decoration:none}
     <a class="wordmark" href="/">Luisterpost</a>
     <nav aria-label="Live channels">
       <a href="/aircraft/">Planes</a>
+      <a href="/ships/">Ships</a>
       <a href="/drones/">Drones</a>
       <a href="/radiation/">Radiation</a>
       <a href="/birds/">Birds</a>
@@ -195,7 +196,7 @@ footer a{color:var(--signal);text-decoration:none}
   </section>
 
   <section class="chart" aria-label="The five media the station receives on">
-    <div class="chart-head"><span>Receiving bands</span><span>5 media · 4 live channels</span></div>
+    <div class="chart-head"><span>Receiving bands</span><span>5 media · 5 live channels</span></div>
     <div class="bands">
       <a class="band" href="#ch04">
         <span class="tick t-sound" aria-hidden="true"></span>
@@ -221,7 +222,7 @@ footer a{color:var(--signal);text-decoration:none}
         <p class="range mono">0.05 – 3 MEV</p>
         <p class="what">Ionizing radiation: cosmic rays, radon washout, the background itself.</p>
       </a>
-      <a class="band" href="#ch05">
+      <a class="band" href="#ch06">
         <span class="tick t-air" aria-hidden="true"></span>
         <h2>Air</h2><span class="nl">lucht</span>
         <p class="range mono">0.3 – 10 µm</p>
@@ -229,7 +230,7 @@ footer a{color:var(--signal);text-decoration:none}
       </a>
     </div>
   </section>
-  <p class="chart-note">The station receives on five physical media. Four channels are published live so far — the rest of the instruments report into the station’s own logs.</p>
+  <p class="chart-note">The station receives on five physical media. Five channels are published live so far — the rest of the instruments report into the station’s own logs.</p>
 
   <section class="prose">
     <p>A luisterpost is what the Dutch military called a signals intercept station — a room full of receivers, pointed at whatever was passing through the air. This one is not on a border or a hilltop. It is an ordinary house in Utrecht, fitted over the years with microphones, antennas, particle detectors and weather instruments, all reporting into one small MQTT broker in the meter cupboard.</p>
@@ -269,10 +270,18 @@ footer a{color:var(--signal);text-decoration:none}
 
     <div class="channel" id="ch05">
       <span class="ch mono">CH 05</span>
+      <div><h3>Ships — AIS</h3><p class="desc">Vessel transponders at 162 MHz, decoded from a VHF receiver. Mostly the small working boats going round the singel rather than shipping. <a href="/ships/">See what is on the water now →</a></p></div>
+      <span class="medium mono md-radio">Radio 162 MHz</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
+    </div>
+
+    <div class="channel" id="ch06">
+      <span class="ch mono">CH 06</span>
       <div><h3>Air quality</h3><p class="desc">Particulates, volatile compounds and nitrogen oxides from a Sensirion SEN55 in the garden. Built and running on the bench; it publishes once it is outside in its housing, because until then it would be reporting a room rather than the air. <a href="/air/">What it will measure →</a></p></div>
       <span class="medium mono md-air">Particle count <span class="unit">0.3–10 µm</span></span>
       <span class="status mono s-test"><i aria-hidden="true"></i>IN TEST</span>
     </div>
+
   </section>
 
   <section class="repo">

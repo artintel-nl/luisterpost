@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ships — AIS — Luisterpost</title>
+<meta name="description" content="Live AIS reception at the Luisterpost listening post in Utrecht: the boats working the singel, decoded from their 162 MHz transponders.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H"
+      crossorigin="anonymous">
+<style>
+:root{
+  --ink:#1a1c17;
+  --ink-inverse:#ece8dd;
+  --signal:#d9963f;
+  --tile:#171a14;
+  --paper:#f4f1e8;
+  --paper-sunk:#e9e5d9;
+  --rule:#d3cebe;
+  --rule-dark:#2b3026;
+  --muted:#6d6a5c;
+  --muted-dark:#8d9483;
+  --link:#8a5a1e;
+  --link-hover:#d9963f;
+  --oxide:#c2543a;
+  --slate:#1f6f9c;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Archivo",system-ui,sans-serif;
+  background:var(--paper-sunk);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.55;
+  text-wrap:pretty;
+}
+a{color:var(--link);transition:color 200ms ease}
+a:hover{color:var(--link-hover)}
+a:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.mono{font-family:"JetBrains Mono",monospace}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
+.hdr{display:flex;align-items:center;gap:14px;padding:16px 24px;max-width:960px;margin:0 auto}
+.hdr img{width:30px;height:30px;display:block}
+.hdr .wordmark{font-weight:700;font-size:15px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-inverse);text-decoration:none}
+.hdr nav{margin-left:40px;display:flex;gap:20px}
+.hdr nav a{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-dark);text-decoration:none}
+.hdr nav a:hover,.hdr nav a[aria-current]{color:var(--ink-inverse)}
+.hdr .live{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--signal)}
+.hdr .live i{width:7px;height:7px;border-radius:50%;background:var(--signal);flex:none}
+.hdr .live.is-down{color:var(--muted-dark)}
+.hdr .live.is-down i{background:var(--muted-dark)}
+.hdr .live.is-live i{animation:beat 2s ease-in-out infinite}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.hdr .live.is-live i{animation:none}}
+@media (max-width:700px){.hdr nav{display:none}}
+
+.pagehead{padding:44px 0 26px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:block}
+.pagehead h1{font-weight:700;font-size:clamp(28px,4.6vw,42px);letter-spacing:-.015em;line-height:1.08}
+.pagehead .thesis{margin-top:12px;font-size:16px;line-height:1.5;max-width:34em;color:var(--muted)}
+.tick-radio{display:block;height:5px;width:64px;background:var(--oxide);margin-bottom:16px}
+
+.readout{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.readout div{padding:16px;border-right:1px solid var(--rule)}
+.readout div:last-child{border-right:none}
+.readout dt{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.readout dd{font-family:"JetBrains Mono",monospace;font-size:24px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
+.readout dd small{font-size:11px;color:var(--muted);letter-spacing:.1em}
+@media (max-width:700px){.readout{grid-template-columns:1fr 1fr}.readout div{border-bottom:1px solid var(--rule)}}
+
+.card{border:1px solid var(--rule);background:var(--paper);margin-bottom:10px}
+.card-head{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule);font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+#map{height:520px;width:100%;background:var(--paper-sunk)}
+/* A light warm tint so the basemap sits on paper without clashing — but kept
+   gentle, because the canals are the whole point of this map and a heavier
+   filter bleaches the water out of them. */
+.leaflet-tile-pane{filter:sepia(.14) saturate(.95)}
+.leaflet-container{font-family:"JetBrains Mono",monospace;font-size:11px;background:var(--paper-sunk)}
+.leaflet-control-attribution{background:rgba(244,241,232,.86)!important;color:var(--muted)!important;font-size:10px!important}
+.leaflet-control-attribution a{color:var(--link)!important}
+.vessel-label{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:500;color:var(--ink);white-space:nowrap;text-shadow:0 0 3px var(--paper),0 0 3px var(--paper)}
+
+table{border-collapse:collapse;width:100%;font-family:"JetBrains Mono",monospace;font-size:12px}
+th{text-align:left;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:9px 14px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:8px 14px;border-bottom:1px solid var(--paper-sunk);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td.n{font-weight:500}
+td.num{text-align:right}
+.dim{color:var(--muted)}
+.tbl-empty{padding:24px 14px;text-align:center;color:var(--muted);font-size:12px;letter-spacing:.1em}
+
+.note{font-size:12.5px;color:var(--muted);margin:18px 0 56px;max-width:46em}
+.note code{font-family:"JetBrains Mono",monospace;font-size:12px;background:var(--paper);padding:1px 5px;border:1px solid var(--rule)}
+.note p+p{margin-top:.8em}
+.note b{color:var(--ink);font-weight:600}
+
+footer{background:var(--tile);color:var(--muted-dark);padding:26px 0 44px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+footer a{color:var(--signal);text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <img src="../assets/mark-on-dark.svg" alt="" width="30" height="30">
+    <a class="wordmark" href="/">Luisterpost</a>
+    <nav aria-label="Live channels">
+      <a href="/aircraft/">Planes</a>
+      <a href="/ships/" aria-current="page">Ships</a>
+      <a href="/drones/">Drones</a>
+      <a href="/radiation/">Radiation</a>
+      <a href="/birds/">Birds</a>
+      <a href="/air/">Air</a>
+    </nav>
+    <span class="live mono is-down" id="conn"><i aria-hidden="true"></i><span id="conn-txt">CONNECTING</span></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="pagehead">
+    <span class="tick-radio" aria-hidden="true"></span>
+    <span class="eyebrow">Channel 05 · AIS · Radio 162 MHz</span>
+    <h1>The boats on the singel</h1>
+    <p class="thesis">Vessels broadcast their identity, position and heading on two VHF channels just above the FM band. Most of what this station hears is not shipping at all — it is the small working boats going round and round the canal that rings the old city.</p>
+  </section>
+
+  <dl class="readout">
+    <div><dt>Vessels now</dt><dd id="r-count">—</dd></div>
+    <div><dt>Under way</dt><dd id="r-moving">—</dd></div>
+    <div><dt>Fastest</dt><dd id="r-fast">—<small> kn</small></dd></div>
+  </dl>
+
+  <section class="card">
+    <div class="card-head">
+      <span>Where they are</span>
+      <span id="map-note">live</span>
+    </div>
+    <div id="map" role="img" aria-label="Map of vessels currently transmitting AIS near the station. The same vessels are listed in the table below."></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span>Vessels</span><span>by speed</span></div>
+    <div style="overflow-x:auto">
+      <table>
+        <caption style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Vessels currently transmitting</caption>
+        <thead><tr>
+          <th scope="col">Name</th><th scope="col">MMSI</th>
+          <th scope="col" style="text-align:right">Speed</th>
+          <th scope="col" style="text-align:right">Course</th>
+          <th scope="col" style="text-align:right">Length</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="tbl-empty mono" id="tbl-empty">Listening…</div>
+    </div>
+  </section>
+
+  <div class="note">
+    <p>Positions arrive on the public MQTT broker at <code>wss://live.luisterpost.io</code>,
+    topic <code>luisterpost/ships/+/position</code>. AIS is transmitted in clear and
+    aggregated publicly worldwide, so a vessel's position and name are public data in the
+    same way an aircraft's are — and unlike a drone's Remote ID beacon, an AIS message says
+    nothing about where any operator is standing.</p>
+
+    <p><b>There is no marker for the station, and there is no distance on this page.</b> The
+    receiver reports each vessel's range and bearing from itself, and both are discarded
+    before publishing. With an absolute position, a range and a bearing, a single vessel would
+    fix this station exactly — a sharper giveaway than the aircraft feed, where it takes three
+    to triangulate. The station's own position stays where it is published everywhere else, at
+    city precision.</p>
+
+    <p>A vessel disappears from the map a few minutes after its last transmission. Small craft
+    report far less often than seagoing ships, so a boat sitting still may go quiet for a while
+    before it fades.</p>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Luisterpost · Utrecht NL · 52.09°N 5.12°E</span>
+    <span>Code MIT · Data CC BY 4.0 · <a href="https://github.com/artintel-nl/luisterpost">GitHub</a></span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"
+        integrity="sha384-u4uqeACkFcoKl57rBQJHVGDd1pqhW4w8X3WjTu1ZksPdxoLqdt34jpoNkJisE25W"
+        crossorigin="anonymous"></script>
+<script>
+(function () {
+  "use strict";
+  var BROKER = "wss://live.luisterpost.io/";
+  var STALE_MS = 300000;              // small craft report sparsely; be patient
+  var vessels = new Map();            // mmsi -> {lat,lon,sog,cog,name,length,seen,marker,label}
+
+  var els = {};
+  ["conn","conn-txt","r-count","r-moving","r-fast","tbody","tbl-empty","map-note"]
+    .forEach(function (id) { els[id] = document.getElementById(id); });
+
+  // Centred on the station's PUBLISHED position — city precision, 52.09 / 5.12 —
+  // which is already stated on every page. No marker is drawn for it.
+  var map = L.map("map", { zoomControl: true, attributionControl: true })
+              .setView([52.0905, 5.1215], 15);   // tight enough to read the singel ring
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: "abcd", maxZoom: 19
+  }).addTo(map);
+
+  function vesselIcon(cog) {
+    // A triangle pointing along the course. Falls back to a dot when the vessel
+    // is not reporting a course.
+    var html = (cog == null)
+      ? '<div style="width:10px;height:10px;border-radius:50%;background:#c2543a;' +
+        'border:2px solid #f4f1e8;box-sizing:border-box"></div>'
+      : '<div style="width:0;height:0;border-left:6px solid transparent;' +
+        'border-right:6px solid transparent;border-bottom:14px solid #c2543a;' +
+        'transform:rotate(' + cog + 'deg);transform-origin:50% 65%;' +
+        'filter:drop-shadow(0 0 1.5px #f4f1e8)"></div>';
+    return L.divIcon({ html: html, className: "", iconSize: [12, 14], iconAnchor: [6, 9] });
+  }
+
+  function render() {
+    var now = Date.now(), list = [];
+    vessels.forEach(function (v, mmsi) {
+      if (now - v.seen > STALE_MS) {
+        if (v.marker) map.removeLayer(v.marker);
+        if (v.label) map.removeLayer(v.label);
+        vessels.delete(mmsi);
+        return;
+      }
+      list.push({ mmsi: mmsi, v: v });
+    });
+    list.sort(function (a, b) { return (b.v.sog || 0) - (a.v.sog || 0); });
+
+    els["r-count"].textContent = list.length || "—";
+    var moving = list.filter(function (x) { return (x.v.sog || 0) >= 0.5; }).length;
+    els["r-moving"].textContent = list.length ? moving : "—";
+    var fast = list.length ? Math.max.apply(null, list.map(function (x) { return x.v.sog || 0; })) : null;
+    els["r-fast"].innerHTML = (fast != null ? fast.toFixed(1) : "—") + "<small> kn</small>";
+    els["map-note"].textContent = list.length
+      ? list.length + (list.length === 1 ? " vessel" : " vessels") : "none heard";
+
+    els["tbl-empty"].style.display = list.length ? "none" : "";
+    var frag = document.createDocumentFragment();
+    list.forEach(function (x) {
+      var tr = document.createElement("tr");
+      function cell(text, cls) {
+        var td = document.createElement("td");
+        td.textContent = text;              // never innerHTML: names come off the air
+        if (cls) td.className = cls;
+        tr.appendChild(td);
+      }
+      cell(x.v.name || "—", x.v.name ? "n" : "n dim");
+      cell(x.mmsi, "dim");
+      cell(x.v.sog != null ? x.v.sog.toFixed(1) : "—", "num");
+      cell(x.v.cog != null ? String(Math.round(x.v.cog)).padStart(3, "0") + "°" : "—", "num");
+      cell(x.v.length != null ? x.v.length + " m" : "—", "num dim");
+      frag.appendChild(tr);
+    });
+    els.tbody.textContent = "";
+    els.tbody.appendChild(frag);
+  }
+
+  function setConn(s, txt) { els.conn.className = "live mono " + s; els["conn-txt"].textContent = txt; }
+
+  setConn("is-down", "CONNECTING");
+  var client = mqtt.connect(BROKER, {
+    clientId: "luisterpost-ships-" + Math.random().toString(16).slice(2, 10),
+    keepalive: 45, reconnectPeriod: 4000, clean: true
+  });
+  client.on("connect", function () {
+    setConn("is-live", "RECEIVING");
+    client.subscribe("luisterpost/ships/+/position");
+    client.subscribe("luisterpost/station/status");
+  });
+  client.on("reconnect", function () { setConn("is-down", "RECONNECTING"); });
+  client.on("close",     function () { setConn("is-down", "OFFLINE"); });
+  client.on("error",     function () { setConn("is-down", "ERROR"); });
+
+  client.on("message", function (topic, payload) {
+    var d;
+    try { d = JSON.parse(payload.toString()); } catch (e) { return; }
+
+    if (topic === "luisterpost/station/status") {
+      if (d.online === false) setConn("is-down", "STATION OFFLINE");
+      return;
+    }
+    var m = topic.match(/^luisterpost\/ships\/([0-9]{9})\/position$/);
+    if (!m) return;
+    if (!isFinite(d.lat) || !isFinite(d.lon)) return;
+    if (Math.abs(d.lat) > 90 || Math.abs(d.lon) > 180) return;
+
+    var mmsi = m[1];
+    var v = vessels.get(mmsi) || {};
+    v.lat = d.lat; v.lon = d.lon;
+    v.sog = isFinite(d.sog) ? d.sog : v.sog;
+    v.cog = isFinite(d.cog) ? d.cog : v.cog;
+    v.length = isFinite(d.length_m) ? d.length_m : v.length;
+    if (typeof d.name === "string" && /^[A-Z0-9 .,'@#/&()+-]{1,24}$/.test(d.name)) v.name = d.name;
+    v.seen = Date.now();
+
+    if (!v.marker) {
+      v.marker = L.marker([v.lat, v.lon], { icon: vesselIcon(v.cog) }).addTo(map);
+      v.label = L.marker([v.lat, v.lon], {
+        icon: L.divIcon({ className: "", iconSize: [0, 0],
+                          html: '<div class="vessel-label"></div>' }),
+        interactive: false
+      }).addTo(map);
+    } else {
+      v.marker.setLatLng([v.lat, v.lon]);
+      v.marker.setIcon(vesselIcon(v.cog));
+      v.label.setLatLng([v.lat, v.lon]);
+    }
+    // textContent, not innerHTML — a vessel name arrives over the air.
+    var el = v.label.getElement();
+    if (el && el.firstChild) {
+      el.firstChild.textContent = v.name || mmsi;
+      el.firstChild.style.transform = "translate(10px,-8px)";
+    }
+    v.marker.bindTooltip(
+      (v.name || ("MMSI " + mmsi)) +
+      (v.sog != null ? " · " + v.sog.toFixed(1) + " kn" : "") +
+      (v.length != null ? " · " + v.length + " m" : ""),
+      { direction: "top", offset: [0, -8] });
+
+    vessels.set(mmsi, v);
+    // Repaint immediately: the marker appears on message receipt, so leaving the
+    // counts to the 2 s tick briefly shows a boat above a header saying "none heard".
+    render();
+  });
+
+  render();
+  setInterval(render, 2000);
+})();
+</script>
+</body>
+</html>
