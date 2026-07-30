@@ -212,7 +212,7 @@ footer a{color:var(--signal);text-decoration:none}
   // Centred on the station's PUBLISHED position — city precision, 52.09 / 5.12 —
   // which is already stated on every page. No marker is drawn for it.
   var map = L.map("map", { zoomControl: true, attributionControl: true })
-              .setView([52.0905, 5.1215], 15);   // tight enough to read the singel ring
+              .setView([52.0905, 5.1215], 14);   // singel ring plus a little of the city around it
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: "abcd", maxZoom: 19
