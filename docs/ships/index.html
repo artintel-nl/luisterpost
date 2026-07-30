@@ -178,9 +178,14 @@ footer a{color:var(--signal);text-decoration:none}
     to triangulate. The station's own position stays where it is published everywhere else, at
     city precision.</p>
 
-    <p>A vessel disappears from the map a few minutes after its last transmission. Small craft
-    report far less often than seagoing ships, so a boat sitting still may go quiet for a while
-    before it fades.</p>
+    <p>A vessel stays on the map for fifteen minutes after its last transmission, matching the
+    station's own receiver. Small craft report far less often than seagoing ships — a boat lying
+    still can be silent for minutes at a time — so a shorter window would show an emptier canal
+    than there really is.</p>
+
+    <p>The station keeps its list of current vessels in memory, so after a restart the map fills
+    up again as each boat next transmits rather than all at once. If a vessel is missing that you
+    can see from the bridge, that is usually why.</p>
   </div>
 
 </main>
@@ -202,7 +207,9 @@ footer a{color:var(--signal);text-decoration:none}
 (function () {
   "use strict";
   var BROKER = "wss://live.luisterpost.io/";
-  var STALE_MS = 300000;              // small craft report sparsely; be patient
+  // Matches the station's own AIS collector: a vessel at anchor transmits rarely,
+  // so a short window makes the canal look emptier than it is.
+  var STALE_MS = 900000;
   var vessels = new Map();            // mmsi -> {lat,lon,sog,cog,name,length,seen,marker,label}
 
   var els = {};
@@ -282,6 +289,9 @@ footer a{color:var(--signal);text-decoration:none}
   });
   client.on("connect", function () {
     setConn("is-live", "RECEIVING");
+    // Retained fleet snapshot first, so the map is populated on load rather than
+    // filling only as vessels happen to transmit — AIS can be silent for minutes.
+    client.subscribe("luisterpost/ships/current");
     client.subscribe("luisterpost/ships/+/position");
     client.subscribe("luisterpost/station/status");
   });
@@ -297,12 +307,25 @@ footer a{color:var(--signal);text-decoration:none}
       if (d.online === false) setConn("is-down", "STATION OFFLINE");
       return;
     }
+    if (topic === "luisterpost/ships/current") {
+      if (Array.isArray(d.vessels)) d.vessels.forEach(function (v) {
+        if (/^[0-9]{9}$/.test(String(v.mmsi))) upsert(String(v.mmsi), v);
+      });
+      render();
+      return;
+    }
     var m = topic.match(/^luisterpost\/ships\/([0-9]{9})\/position$/);
     if (!m) return;
     if (!isFinite(d.lat) || !isFinite(d.lon)) return;
     if (Math.abs(d.lat) > 90 || Math.abs(d.lon) > 180) return;
 
-    var mmsi = m[1];
+    upsert(m[1], d);
+    render();
+  });
+
+  function upsert(mmsi, d) {
+    if (!isFinite(d.lat) || !isFinite(d.lon)) return;
+    if (Math.abs(d.lat) > 90 || Math.abs(d.lon) > 180) return;
     var v = vessels.get(mmsi) || {};
     v.lat = d.lat; v.lon = d.lon;
     v.sog = isFinite(d.sog) ? d.sog : v.sog;
@@ -336,10 +359,7 @@ footer a{color:var(--signal);text-decoration:none}
       { direction: "top", offset: [0, -8] });
 
     vessels.set(mmsi, v);
-    // Repaint immediately: the marker appears on message receipt, so leaving the
-    // counts to the 2 s tick briefly shows a boat above a header saying "none heard".
-    render();
-  });
+  }
 
   render();
   setInterval(render, 2000);
