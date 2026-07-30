@@ -16,3 +16,11 @@ __pycache__/
 *.pyc
 # keep the raw handoff private; brand/ is the public copy
 design_handoff_luisterpost_logo/
+
+# Node firmware. Held back with publisher/ until we decide what goes public —
+# organisation now, publication decision later.
+nodes/
+
+# Credentials never go in, even if the folders above are later un-ignored.
+# The ** form survives that change; a path under an ignored dir would not.
+**/secrets.h
