@@ -210,7 +210,10 @@ footer a{color:var(--signal);text-decoration:none}
            aria-label="Polar plot of drones currently broadcasting, by range and bearing from the listening post. Positions are relative to the post; no absolute coordinates are published.">
         <g id="s-grid"></g>
         <g id="s-marks"></g>
-        <text id="s-empty" class="chart-empty" x="350" y="350">No drones broadcasting</text>
+        <!-- y=318, not 350: the post glyph occupies 340-357 at the centre and the 1 km ring
+             crosses the vertical axis at 292, so this sits in the clear gap between them
+             rather than printing straight through the antenna. -->
+        <text id="s-empty" class="chart-empty" x="350" y="318">No drones broadcasting</text>
       </svg>
     </div>
     <p class="cap">Each mark is one airframe, placed by the GPS fix in its own beacon —
