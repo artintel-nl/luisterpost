@@ -111,6 +111,21 @@ svg.trace{display:block;width:100%;height:auto}
 .spec-key{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em}
 .spec-mark{stroke:var(--oxide);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
 .spec-mark-lbl{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.08em;fill:var(--oxide)}
+.refsel{display:flex;gap:8px;padding:12px 16px 0;flex-wrap:wrap}
+.refsel button{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;padding:7px 12px;border:1px solid var(--rule);background:transparent;
+  color:var(--muted);cursor:pointer;transition:background 120ms ease,color 120ms ease}
+.refsel button:hover{color:var(--ink)}
+.refsel button[aria-pressed="true"]{background:var(--tile);color:var(--ink-inverse);border-color:var(--tile)}
+.ref-found{fill:none;stroke:var(--oxide);stroke-width:1.6;stroke-linejoin:round}
+.ref-zero{stroke:var(--rule);stroke-width:1}
+.ref-hit{stroke:var(--oxide);stroke-width:1;stroke-dasharray:3 3}
+.ref-miss{stroke:var(--rule);stroke-width:1;stroke-dasharray:2 4}
+.ref-lbl{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.06em;fill:var(--oxide)}
+.ref-lbl.is-miss{fill:var(--muted)}
+.ref-stats{display:flex;gap:22px;flex-wrap:wrap;padding:6px 16px 0;font-family:"JetBrains Mono",monospace;
+  font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.ref-stats b{color:var(--ink);font-weight:600}
 .wf-wrap{padding:14px 16px 16px}
 .wf-rows{display:flex;gap:10px;align-items:flex-start}
 .wf-rows canvas{flex:1 1 auto;width:100%;display:block;image-rendering:pixelated;border:1px solid var(--rule)}
@@ -291,6 +306,41 @@ footer a{color:var(--signal);text-decoration:none}
       </table>
       <div class="tbl-empty mono" id="tbl-empty">Waiting for the first minute of data…</div>
     </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <span>Reference spectra · <span class="unit">known objects</span></span>
+      <span id="ref-note">excess over background</span>
+    </div>
+    <div class="refsel" role="group" aria-label="Choose a measured object">
+      <button type="button" data-ref="glass" aria-pressed="true">Uranium glass</button>
+      <button type="button" data-ref="switch" aria-pressed="false">Bakelite switch</button>
+    </div>
+    <div class="ref-stats" id="ref-stats"></div>
+    <div class="chartwrap">
+      <svg class="trace" id="refchart" viewBox="0 0 900 300" role="img"
+           aria-label="Excess gamma counts above natural background for a measured object, against photon energy in keV. Peaks from the uranium-238 decay chain are marked.">
+        <g id="ref-grid"></g>
+        <g id="ref-marks"></g>
+        <path id="ref-path" class="ref-found"></path>
+      </svg>
+    </div>
+    <p class="spec-cap">These are two ordinary household objects, measured on this detector and
+    plotted as <b>counts above the natural background</b> — the background of the previous
+    section subtracted away, so what is left is the object alone. Both turn out to contain
+    <b>uranium</b>, used a century ago as a colourant: in glass it fluoresces green, in the
+    switch it is simply black.</p>
+    <p class="spec-cap">The identification rests on which peaks are present and, just as much,
+    on which are <b>missing</b>. <b>Thorium-234</b> at 63 and 93&nbsp;keV is a direct daughter of
+    uranium-238, and <b>uranium-235</b> shows at 186&nbsp;keV. But <b>lead-214</b> and
+    <b>bismuth-214</b> — which any uranium <i>ore</i> would show in abundance — are absent, so
+    the uranium was chemically separated from the rest of its decay chain before it was used.
+    That is a manufactured pigment, not a piece of rock. <b>Thallium-208</b> at 2614&nbsp;keV,
+    the giveaway for the rival thorium series, is absent too.</p>
+    <p class="spec-cap">Neither object is hazardous: held against the detector they read a few
+    tenths of a microsievert per hour, and at arm's length they vanish into the background
+    entirely.</p>
   </section>
 
   <div class="note">
@@ -870,6 +920,93 @@ footer a{color:var(--signal);text-decoration:none}
       setConn("is-down", "STATION OFFLINE");
     }
   });
+})();
+</script>
+<script>
+/* Reference spectra — two static measurements, plotted as excess over background.
+   Self-contained: no live data, no shared state with the MQTT section above. */
+(function () {
+  var REF = {"glass":{"label":"Uranium glass","note":"1 hour \u00b7 3 Aug 2026","live":3601,"obs":58273,"exp":50685,"excess":7588,"excess_per_h":[18.0,470.0,281.9,297.6,239.0,752.8,976.6,814.5,538.6,921.7,656.6,328.1,141.2,34.0,56.1,83.8,92.0,118.2,181.8,153.2,87.9,20.8,1.4,4.7,35.6,5.7,0.4,36.8,48.9,-23.0,14.5,20.0,20.6,3.2,0.1,-1.0,-13.8,18.9,-9.5,16.2,3.1,12.6,4.6,0.7,2.7,9.2,-3.2,-16.1,-5.8,11.0,8.4,-10.1,-8.5,-9.0,-4.3,0.9,12.3,7.3,-9.2,5.7,-3.7,6.7,3.1,18.9,6.8,-3.2,1.8,7.6,3.8,-2.7,8.5,5.6,1.4,10.9,2.7,6.9,7.7,1.9,9.1,0.9,6.6,1.4,-3.5,4.6,0.7,-4.6,-7.1,-4.7,-3.0,3.1,-3.7,9.0,-5.0,6.9,4.4,-3.6,3.0,-1.0,-1.6,1.1,3.6,-0.6,12.0,1.6,-0.9,-1.2,-0.4,1.7,5.5,3.7,0.6,-6.0,0.6,-4.1,-4.3,-5.4,2.1,-2.0,-7.6,-5.1,5.6,-3.0,0.4,0.1,4.0,0.9,0.1,-5.4,-0.3,-3.9,1.0,1.4,-2.2,-2.4,-4.3,0.4,0.1,-0.4,6.6,1.7,8.1,0.1,5.0,-0.1,-6.2,0.8,-0.8,10.2,2.3,4.3,-5.8,4.6,1.5,3.3,-1.9,-1.1,-0.1,0.4,0.3,0.6],"lines":[{"n":"Th-234","k":63.3,"z":6.4},{"n":"Th-234","k":92.6,"z":10.5},{"n":"U-235","k":185.7,"z":4.5},{"n":"Pb-214","k":351.9,"z":-0.7},{"n":"Bi-214","k":609.3,"z":1.2},{"n":"Tl-208","k":2614.5,"z":-1.9}]},"switch":{"label":"Bakelite light switch","note":"10 minutes \u00b7 29 Jul 2026","live":601,"obs":22117,"exp":8459,"excess":13658,"excess_per_h":[270.5,11434.7,3617.5,2681.7,1957.9,5262.6,6792.3,4797.6,5208.2,7875.7,5497.9,2824.3,1652.3,1157.3,1069.7,1243.4,1199.0,1208.4,2481.7,1533.2,1004.0,467.9,481.5,388.1,211.5,305.5,263.4,326.6,241.0,231.2,215.7,161.4,182.0,231.5,129.6,145.5,131.8,82.5,202.9,172.8,188.6,219.1,148.2,111.4,189.2,157.9,186.4,76.7,234.7,135.6,132.1,213.5,186.1,86.8,137.4,90.7,96.0,137.0,105.5,153.4,143.9,99.4,63.0,73.7,101.6,111.5,119.6,90.4,63.7,122.1,69.3,69.4,77.2,112.6,41.6,120.7,97.5,62.7,51.0,81.8,88.4,77.2,89.3,23.5,42.6,60.3,36.8,67.1,66.8,79.0,55.2,48.9,43.9,50.8,63.3,45.3,56.9,46.9,59.3,60.0,36.6,17.3,1.9,13.5,31.1,31.7,-6.4,19.7,43.4,49.6,5.5,7.0,25.5,-10.1,-0.3,20.5,15.1,15.9,7.4,10.8,5.5,9.0,12.3,19.1,-4.0,16.9,9.0,9.6,5.7,4.1,-7.0,0.4,10.8,-7.4,-1.3,6.4,10.0,-2.4,5.6,-3.3,14.1,16.1,1.0,-3.1,23.8,11.7,15.1,-10.7,14.3,5.3,-7.8,-6.4,-4.5,0.3,-3.9,-5.1,0.9,-3.6,1.3,-3.4],"lines":[{"n":"Th-234","k":63.3,"z":3.2},{"n":"Th-234","k":92.6,"z":24.7},{"n":"U-235","k":185.7,"z":10.2},{"n":"Pb-214","k":351.9,"z":-3.0},{"n":"Bi-214","k":609.3,"z":-1.2},{"n":"Tl-208","k":2614.5,"z":-0.7}]}};
+  var BIN = 10, EMAX = 1600;
+  var L = 60, R = 20, T = 18, B = 34, W = 900, H = 300;
+  var PW = W - L - R, PH = H - T - B;
+  function el(id) { return document.getElementById(id); }
+  function svg(tag, attrs) {
+    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  var X = function (kev) { return L + Math.min(kev, EMAX) / EMAX * PW; };
+
+  function draw(key) {
+    var d = REF[key];
+    if (!d) return;
+    var ex = d.excess_per_h, max = 0, i;
+    for (i = 0; i < ex.length; i++) if (ex[i] > max) max = ex[i];
+    max = max * 1.25 || 1;
+    var Y = function (v) { return T + PH - (v / max) * PH; };
+
+    var g = el("ref-grid"); g.textContent = "";
+    for (i = 0; i <= 4; i++) {
+      var v = max * i / 4, y = Y(v);
+      g.appendChild(svg("line", { class: "gridline", x1: L, x2: L + PW, y1: y, y2: y }));
+      var t = svg("text", { class: "axis-lbl", x: L - 8, y: y + 4, "text-anchor": "end" });
+      t.textContent = Math.round(v);
+      g.appendChild(t);
+    }
+    for (var kev = 0; kev <= EMAX; kev += 400) {
+      var tx = svg("text", { class: "axis-lbl", x: X(kev), y: H - 12, "text-anchor": "middle" });
+      tx.textContent = kev;
+      g.appendChild(tx);
+    }
+    var yl = svg("text", { class: "axis-lbl", x: L - 8, y: T - 6, "text-anchor": "end" });
+    yl.textContent = "counts/h";
+    g.appendChild(yl);
+    var xl = svg("text", { class: "axis-lbl", x: L + PW, y: H - 12, "text-anchor": "end" });
+    xl.textContent = "keV";
+    g.appendChild(xl);
+    g.appendChild(svg("line", { class: "ref-zero", x1: L, x2: L + PW, y1: Y(0), y2: Y(0) }));
+
+    var m = el("ref-marks"); m.textContent = "";
+    d.lines.forEach(function (ln, idx) {
+      if (ln.k > EMAX) return;
+      var hit = ln.z >= 3, x = X(ln.k);
+      m.appendChild(svg("line", {
+        class: hit ? "ref-hit" : "ref-miss", x1: x, x2: x, y1: T + 4, y2: T + PH
+      }));
+      var lab = svg("text", {
+        class: "ref-lbl" + (hit ? "" : " is-miss"), x: x + 3,
+        y: T + 12 + (idx % 3) * 12
+      });
+      lab.textContent = hit ? (ln.n + " " + Math.round(ln.k) + "  z+" + ln.z)
+                            : ("no " + ln.n);
+      m.appendChild(lab);
+    });
+
+    var pts = [];
+    for (i = 0; i < ex.length; i++) {
+      pts.push(X((i + 0.5) * BIN).toFixed(1) + " " + Y(ex[i]).toFixed(1));
+    }
+    el("ref-path").setAttribute("d", "M" + pts.join(" L"));
+
+    el("ref-stats").innerHTML =
+      "<span>" + d.note + "</span>" +
+      "<span>live <b>" + d.live + " s</b></span>" +
+      "<span>counts <b>" + d.obs + "</b> vs <b>" + d.exp + "</b> expected</span>" +
+      "<span>excess <b>+" + d.excess + "</b></span>";
+    el("ref-note").textContent = d.label;
+  }
+
+  var btns = document.querySelectorAll(".refsel button");
+  Array.prototype.forEach.call(btns, function (b) {
+    b.addEventListener("click", function () {
+      Array.prototype.forEach.call(btns, function (o) {
+        o.setAttribute("aria-pressed", String(o === b));
+      });
+      draw(b.getAttribute("data-ref"));
+    });
+  });
+  draw("glass");
 })();
 </script>
 </body>
