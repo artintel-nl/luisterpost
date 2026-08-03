@@ -107,6 +107,13 @@ svg.chart{display:block;width:100%;height:auto}
 footer{background:var(--tile);color:var(--muted-dark);padding:26px 0 44px}
 footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
 footer a{color:var(--signal);text-decoration:none}
+.wbar{fill:var(--slate)}
+.wbar-today{fill:var(--signal)}
+.wbar-zero{fill:var(--rule)}
+.wlab{font-family:"JetBrains Mono",monospace;font-size:12px;fill:var(--muted)}
+.wval{font-family:"JetBrains Mono",monospace;font-size:13px;fill:var(--ink);font-weight:500}
+.chart-foot{font-size:12.5px;color:var(--muted);line-height:1.6;padding:10px 14px;border-top:1px solid var(--rule);margin:0}
+.chart-foot b{color:var(--ink);font-weight:600}
 </style>
 </head>
 <body>
@@ -157,6 +164,23 @@ footer a{color:var(--signal);text-decoration:none}
       poor proxy anyway, since a drone behind a chimney reads faint at fifty metres.</p>
     </div>
   </dl>
+
+  <section class="card">
+    <div class="card-head">
+      <span>Drones seen · last seven days</span>
+      <span id="week-note">collecting…</span>
+    </div>
+    <div class="chartwrap">
+      <svg class="chart" id="week" viewBox="0 0 900 260" role="img"
+           aria-label="Distinct Remote ID airframes heard on each of the last seven days. Days with none are shown as empty.">
+        <g id="w-body"></g>
+        <text id="w-empty" class="chart-empty" x="470" y="120">Collecting…</text>
+      </svg>
+    </div>
+    <p class="chart-foot">Counted as <b>distinct airframes per day</b>, not detections — a drone
+    circling for an hour is one drone. Most days are empty, which is the honest answer;
+    the point of the channel is that it is usually quiet.</p>
+  </section>
 
   <section class="card">
     <div class="card-head">
@@ -251,7 +275,8 @@ footer a{color:var(--signal);text-decoration:none}
   var points = [];
   var els = {};
   ["c-grid","c-area","c-heard","c-near","c-key","c-empty","s-grid","s-marks","s-empty",
-   "heard","near","win","thresh","conn","conn-txt","hist-note","loc-note"]
+   "heard","near","win","thresh","conn","conn-txt","hist-note","loc-note",
+   "w-body","w-empty","week-note","week"]
     .forEach(function (id) { els[id] = document.getElementById(id); });
 
   function svg(tag, attrs) {
@@ -372,6 +397,63 @@ footer a{color:var(--signal);text-decoration:none}
     els["loc-note"].textContent = VIEW_KM + " km radius" + (off ? " · " + off + " beyond" : "");
   }
 
+  // ---- last seven days ------------------------------------------------------
+  // Counts are small by nature — most days are zero and a busy day is three. A bar
+  // chart scaled to a maximum of 2 is noise, so every bar carries its own number and
+  // empty days get a visible floor rather than nothing. Direct labels, no legend.
+  function renderWeek(d) {
+    var days = d && d.days;
+    if (!Array.isArray(days) || !days.length) return;
+
+    var g = els["w-body"];
+    while (g.firstChild) g.removeChild(g.firstChild);
+
+    var total = days.reduce(function (a, b) { return a + (b.airframes || 0); }, 0);
+    els["w-empty"].style.display = "none";
+
+    // A week of zeros drawn on a full-height chart leaves a screen of blank space
+    // above the baseline, which reads as a broken renderer rather than a quiet week.
+    // Collapse the box when there is nothing in it; grow it when there is.
+    var hasData = days.some(function (x) { return (x.airframes || 0) > 0; });
+    var W = 900, H = hasData ? 260 : 132;
+    els.week.setAttribute("viewBox", "0 0 " + W + " " + H);
+    var padL = 30, padR = 30, padT = hasData ? 40 : 30, padB = 46;
+    var pw = W - padL - padR, ph = H - padT - padB;
+    var max = Math.max(1, Math.max.apply(null, days.map(function (x) { return x.airframes || 0; })));
+    var slot = pw / days.length, bw = Math.min(64, slot * 0.55);
+    var todayStr = days[days.length - 1].date;
+
+    days.forEach(function (day, i) {
+      var n = day.airframes || 0;
+      var cx = padL + slot * i + slot / 2;
+      var hgt = n ? Math.max(6, n / max * ph) : 3;
+      var y = padT + ph - hgt;
+
+      g.appendChild(svg("rect", {
+        class: n === 0 ? "wbar-zero" : (day.date === todayStr ? "wbar-today" : "wbar"),
+        x: cx - bw / 2, y: y, width: bw, height: hgt, rx: n ? 4 : 1
+      }));
+
+      var val = svg("text", { class: "wval", x: cx, y: y - 8, "text-anchor": "middle" });
+      val.textContent = String(n);
+      g.appendChild(val);
+
+      // Weekday initial, plus the day number, so seven bars are readable without a legend.
+      var dt = new Date(day.date + "T12:00:00");
+      var lab = svg("text", { class: "wlab", x: cx, y: H - padB + 20, "text-anchor": "middle" });
+      lab.textContent = isNaN(dt) ? day.date.slice(5)
+        : ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()] + " " + dt.getDate();
+      g.appendChild(lab);
+    });
+
+    // Say what the window really covers. After a restart this is honest about it.
+    var covered = isFinite(d.days_with_data) ? d.days_with_data : days.length;
+    els["week-note"].textContent = total === 0
+      ? "nothing in " + days.length + " days"
+      : total + (total === 1 ? " airframe" : " airframes")
+        + (covered < days.length ? " · " + covered + "d recorded" : "");
+  }
+
   // ---- live ----------------------------------------------------------------
   function setConn(s, txt) { els.conn.className = "live mono " + s; els["conn-txt"].textContent = txt; }
 
@@ -384,6 +466,7 @@ footer a{color:var(--signal);text-decoration:none}
     setConn("is-live", "RECEIVING");
     client.subscribe("luisterpost/drones/count");
     client.subscribe("luisterpost/drones/history");
+    client.subscribe("luisterpost/drones/week");
     client.subscribe("luisterpost/drones/status");
     client.subscribe("luisterpost/station/status");
   });
@@ -394,6 +477,8 @@ footer a{color:var(--signal);text-decoration:none}
   client.on("message", function (topic, payload) {
     var d;
     try { d = JSON.parse(payload.toString()); } catch (e) { return; }
+
+    if (topic === "luisterpost/drones/week") { renderWeek(d); return; }
 
     if (topic === "luisterpost/drones/count") {
       if (isFinite(d.broadcasters_heard)) els.heard.textContent = d.broadcasters_heard;
