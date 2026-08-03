@@ -308,6 +308,33 @@ footer a{color:var(--signal);text-decoration:none}
     </div>
   </section>
 
+  <section class="card" id="burstcard" style="display:none">
+    <div class="card-head">
+      <span>Alarm capture · <span class="unit">last trigger</span></span>
+      <span id="burst-when">—</span>
+    </div>
+    <div class="ref-stats" id="burst-stats"></div>
+    <div class="chartwrap">
+      <svg class="trace" id="burstchart" viewBox="0 0 900 300" role="img"
+           aria-label="Short gamma spectrum captured when the count rate spiked, drawn against the expected background for the same length of time.">
+        <g id="b-grid"></g>
+        <g id="b-marks"></g>
+        <path id="b-bg" class="spec-latest"></path>
+        <path id="b-path" class="ref-found"></path>
+      </svg>
+    </div>
+    <p class="spec-cap">When the count rate jumps, the detector stops what it is doing and
+    records a <b>short spectrum</b> — twenty seconds to a minute, rather than the hour above.
+    The reason is arithmetic: a source that passes in a few seconds contributes a few hundred
+    counts, and folded into an hour of background that is a rounding error. Captured in its own
+    short window it stands out roughly a hundred times more clearly, which is the difference
+    between knowing something went by and knowing <i>what</i> went by.</p>
+    <p class="spec-cap">The window closes on its own once the count rate returns to normal, so
+    something carried past in seconds gets a short capture and something set down and left gets
+    a long one. The paler line is the background expected over the same interval; the gap
+    between the two is the source.</p>
+  </section>
+
   <section class="card">
     <div class="card-head">
       <span>Reference spectra · <span class="unit">known objects</span></span>
@@ -413,13 +440,16 @@ footer a{color:var(--signal);text-decoration:none}
 
   var points = [];        // [epoch_s, mean, min, max]
   var baseline = null;    // {mean, hours} — this station's own long-run mean
+  var lastBurst = null;   // most recent alarm capture
+  var lastSpectrum = null; // accumulated hourly spectrum, used as the burst's background
   var els = {};
   ["c-grid","c-band","c-spread","c-line","c-head","c-cross","c-hit","c-empty",
    "tip","tbody","tbl-empty","dose","verdict","verdict-txt","conn","conn-txt",
    "r-cps","r-mean","r-min","r-max","chart-note",
    "s-grid","s-lines","s-path","s-empty","spec-note","c-base","s-latest","s-key",
    "wf","wf-times","wf-axis","wf-scale","wf-scale-max","wf-note",
-   "wf-of","wf-of-rate"]
+   "wf-of","wf-of-rate",
+   "b-grid","b-marks","b-path","b-bg","burst-stats","burst-when","burstcard"]
     .forEach(function (id) { els[id] = document.getElementById(id); });
 
   function svg(tag, attrs) {
@@ -862,6 +892,119 @@ footer a{color:var(--signal);text-decoration:none}
   }
 
   setConn("is-down", "CONNECTING");
+  /* ---------- alarm capture ----------
+     The burst carries raw counts, so the background has to be supplied from the
+     accumulated hourly spectrum and scaled down to the burst's own live time.
+     Without that scaling the two lines would differ by a factor of a hundred and
+     the chart would say nothing. */
+  var BURST_LINES = [
+    { kev: 92.6, label: "Th-234" }, { kev: 185.7, label: "U-235" },
+    { kev: 351.9, label: "Pb-214" }, { kev: 609.3, label: "Bi-214" },
+    { kev: 661.7, label: "Cs-137" }, { kev: 1460.8, label: "K-40" }
+  ];
+
+  function renderBurst() {
+    var b = lastBurst;
+    if (!b || !Array.isArray(b.counts) || !Array.isArray(b.calib) ||
+        !(b.live_time_s > 0)) return;
+    var BL = 60, BR = 20, BT = 18, BB = 34, BW = 900, BH = 300;
+    var PW = BW - BL - BR, PH = BH - BT - BB, EMAX = 1600, REB = 4;
+
+    var cal = b.calib;
+    var gain = (lastSpectrum && lastSpectrum.k40_lock &&
+                isFinite(lastSpectrum.k40_lock.factor)) ? lastSpectrum.k40_lock.factor : 1;
+    var E = function (i) {
+      return (cal[0] + cal[1] * i + (cal.length > 2 ? cal[2] * i * i : 0)) * gain;
+    };
+    var n = (b.overflow === undefined) ? b.counts.length - 1 : b.counts.length;
+
+    // background for exactly this many seconds, from the accumulated spectrum
+    var bg = null;
+    if (lastSpectrum && Array.isArray(lastSpectrum.counts) &&
+        lastSpectrum.live_time_s > 0) {
+      var k = b.live_time_s / lastSpectrum.live_time_s, sc = lastSpectrum.counts;
+      bg = [];
+      for (var i = 0; i < n; i++) bg.push((sc[i] || 0) * k);
+    }
+
+    var pts = [], bpts = [], max = 0, e;
+    for (var c = 0; c < n; c += REB) {
+      var s = 0, sb = 0;
+      for (var j = c; j < Math.min(c + REB, n); j++) {
+        s += b.counts[j];
+        if (bg) sb += bg[j];
+      }
+      e = E(c + REB / 2);
+      if (e > EMAX) break;
+      pts.push([e, s]);
+      if (bg) bpts.push([e, sb]);
+      if (s > max) max = s;
+    }
+    max = max * 1.2 || 1;
+    var X = function (kev) { return BL + Math.min(kev, EMAX) / EMAX * PW; };
+    var Y = function (v) { return BT + PH - (v / max) * PH; };
+
+    var g = els["b-grid"]; g.textContent = "";
+    for (var q = 0; q <= 4; q++) {
+      var v = max * q / 4, y = Y(v);
+      g.appendChild(svg("line", { class: "gridline", x1: BL, x2: BL + PW, y1: y, y2: y }));
+      var t = svg("text", { class: "axis-lbl", x: BL - 8, y: y + 4, "text-anchor": "end" });
+      t.textContent = Math.round(v);
+      g.appendChild(t);
+    }
+    for (var kv = 0; kv <= EMAX; kv += 400) {
+      var tx = svg("text", { class: "axis-lbl", x: X(kv), y: BH - 12, "text-anchor": "middle" });
+      tx.textContent = kv;
+      g.appendChild(tx);
+    }
+    var yl = svg("text", { class: "axis-lbl", x: BL - 8, y: BT - 6, "text-anchor": "end" });
+    yl.textContent = "counts";
+    g.appendChild(yl);
+
+    var m = els["b-marks"]; m.textContent = "";
+    BURST_LINES.forEach(function (L, idx) {
+      if (L.kev > EMAX) return;
+      var x = X(L.kev);
+      m.appendChild(svg("line", { class: "ref-miss", x1: x, x2: x, y1: BT + 4, y2: BT + PH }));
+      var lb = svg("text", { class: "ref-lbl is-miss", x: x + 3, y: BT + 12 + (idx % 3) * 12 });
+      lb.textContent = L.label;
+      m.appendChild(lb);
+    });
+
+    els["b-path"].setAttribute("d", "M" + pts.map(function (p) {
+      return X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1);
+    }).join(" L"));
+    els["b-bg"].setAttribute("d", bpts.length ? "M" + bpts.map(function (p) {
+      return X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1);
+    }).join(" L") : "");
+
+    var tot = 0;
+    for (var z = 0; z < n; z++) tot += b.counts[z];
+    var bits = ["<span>live <b>" + b.live_time_s + " s</b></span>",
+                "<span>counts <b>" + tot + "</b></span>"];
+    if (isFinite(b.peak_cps)) {
+      bits.push("<span>peak <b>" + b.peak_cps.toFixed(1) + "</b> cps</span>");
+    }
+    if (isFinite(b.baseline_cps) && b.baseline_cps > 0 && isFinite(b.peak_cps)) {
+      bits.push("<span><b>" + (b.peak_cps / b.baseline_cps).toFixed(1) +
+                "×</b> background</span>");
+    }
+    if (isFinite(b.peak_dose_rate_uSvh)) {
+      bits.push("<span>peak dose <b>" + b.peak_dose_rate_uSvh.toFixed(3) +
+                "</b> µSv/h</span>");
+    }
+    els["burst-stats"].innerHTML = bits.join("");
+    if (b.ts) {
+      var dt = new Date(b.ts);
+      if (!isNaN(dt)) {
+        els["burst-when"].textContent = dt.toLocaleString([], {
+          day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+        });
+      }
+    }
+    els.burstcard.style.display = "";
+  }
+
   var client = mqtt.connect(BROKER, {
     clientId: "luisterpost-rad-" + Math.random().toString(16).slice(2, 10),
     keepalive: 45, reconnectPeriod: 4000, clean: true
@@ -873,6 +1016,7 @@ footer a{color:var(--signal);text-decoration:none}
     client.subscribe("luisterpost/radiation/history");
     client.subscribe("luisterpost/radiation/spectrum");
     client.subscribe("luisterpost/radiation/waterfall");
+    client.subscribe("luisterpost/radiation/burst");
     client.subscribe("luisterpost/radiation/status");
     client.subscribe("luisterpost/station/status");
   });
@@ -898,7 +1042,14 @@ footer a{color:var(--signal);text-decoration:none}
       return;
     }
     if (topic === "luisterpost/radiation/spectrum") {
+      lastSpectrum = d;
       try { renderSpectrum(d); } catch (e) { /* malformed frame: leave the last one up */ }
+      try { renderBurst(); } catch (e) { /* burst redraw is best-effort */ }
+      return;
+    }
+    if (topic === "luisterpost/radiation/burst") {
+      lastBurst = d;
+      try { renderBurst(); } catch (e) { /* keep whatever is already drawn */ }
       return;
     }
     if (topic === "luisterpost/radiation/realtime") {
