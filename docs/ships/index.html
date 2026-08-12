@@ -287,12 +287,16 @@ footer a{color:var(--signal);text-decoration:none}
     keepalive: 45, reconnectPeriod: 4000, clean: true
   });
   client.on("connect", function () {
-    setConn("is-live", "RECEIVING");
+    // CONNECTED, not RECEIVING: at this point we know our own websocket is up
+    // and nothing whatsoever about whether the receiver is hearing ships. The
+    // ships/status message below is what upgrades this to RECEIVING.
+    setConn("is-live", "CONNECTED");
     // Retained fleet snapshot first, so the map is populated on load rather than
     // filling only as vessels happen to transmit — AIS can be silent for minutes.
     client.subscribe("luisterpost/ships/current");
     client.subscribe("luisterpost/ships/+/position");
     client.subscribe("luisterpost/station/status");
+    client.subscribe("luisterpost/ships/status");
   });
   client.on("reconnect", function () { setConn("is-down", "RECONNECTING"); });
   client.on("close",     function () { setConn("is-down", "OFFLINE"); });
@@ -304,6 +308,17 @@ footer a{color:var(--signal);text-decoration:none}
 
     if (topic === "luisterpost/station/status") {
       if (d.online === false) setConn("is-down", "STATION OFFLINE");
+      return;
+    }
+    if (topic === "luisterpost/ships/status") {
+      // The receiver's own verdict on whether it is hearing anything. A quiet
+      // canal at night still counts as receiving; a dead dongle does not.
+      if (d.receiving === false) {
+        var mins = Math.round((d.silent_for_s || 0) / 60);
+        setConn("is-down", mins > 0 ? "NO SIGNAL " + mins + "m" : "NO SIGNAL");
+      } else if (d.receiving === true) {
+        setConn("is-live", "RECEIVING");
+      }
       return;
     }
     if (topic === "luisterpost/ships/current") {
