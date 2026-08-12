@@ -163,6 +163,7 @@ footer a{color:var(--signal);text-decoration:none}
       <a href="/aircraft/">Planes</a>
       <a href="/ships/">Ships</a>
       <a href="/drones/">Drones</a>
+      <a href="/lightning/">Lightning</a>
       <a href="/radiation/">Radiation</a>
       <a href="/birds/">Birds</a>
       <a href="/air/">Air</a>
@@ -196,7 +197,7 @@ footer a{color:var(--signal);text-decoration:none}
   </section>
 
   <section class="chart" aria-label="The five media the station receives on">
-    <div class="chart-head"><span>Receiving bands</span><span>5 media · 5 live channels</span></div>
+    <div class="chart-head"><span>Receiving bands</span><span>5 media · 6 live channels</span></div>
     <div class="bands">
       <a class="band" href="#ch04">
         <span class="tick t-sound" aria-hidden="true"></span>
@@ -230,7 +231,7 @@ footer a{color:var(--signal);text-decoration:none}
       </a>
     </div>
   </section>
-  <p class="chart-note">The station receives on five physical media. Five channels are published live so far — the rest of the instruments report into the station’s own logs.</p>
+  <p class="chart-note">The station receives on five physical media. Six channels are published live so far — the rest of the instruments report into the station’s own logs.</p>
 
   <section class="prose">
     <p>A luisterpost is what the Dutch military called a signals intercept station — a room full of receivers, pointed at whatever was passing through the air. This one is not on a border or a hilltop. It is an ordinary house in Utrecht, fitted over the years with microphones, antennas, particle detectors and weather instruments, all reporting into one small MQTT broker in the meter cupboard.</p>
@@ -280,6 +281,13 @@ footer a{color:var(--signal);text-decoration:none}
       <div><h3>Air quality</h3><p class="desc">Particulates, volatile compounds and nitrogen oxides from a Sensirion SEN55 in the garden. Built and running on the bench; it publishes once it is outside in its housing, because until then it would be reporting a room rather than the air. <a href="/air/">What it will measure →</a></p></div>
       <span class="medium mono md-air">Particle count <span class="unit">0.3–10 µm</span></span>
       <span class="status mono s-test"><i aria-hidden="true"></i>IN TEST</span>
+    </div>
+
+    <div class="channel" id="ch07">
+      <span class="ch mono">CH 07</span>
+      <div><h3>Lightning — AS3935</h3><p class="desc">A tuned 500 kHz loop on the mast, listening for the radio crack of a stroke rather than the flash or the thunder — so a storm registers here minutes before it is overhead. Reported as a distance band, never a bearing. <a href="/lightning/">See how far out the weather is →</a></p></div>
+      <span class="medium mono md-radio">Radio 500 kHz</span>
+      <span class="status mono s-live"><i aria-hidden="true"></i>LIVE</span>
     </div>
 
   </section>

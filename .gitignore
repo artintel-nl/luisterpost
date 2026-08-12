@@ -1,6 +1,7 @@
 # internal planning docs — never publish
 PUBLISHING-PLAN.md
 DATA-PIPELINE.md
+STRUCTURE-PLAN.md
 
 # The publisher is a good candidate to publish eventually — it's the most interesting
 # part of the architecture and proves exactly what does and doesn't leave the house.
