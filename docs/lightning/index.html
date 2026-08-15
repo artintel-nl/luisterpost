@@ -25,6 +25,7 @@
   --link:#8a5a1e;
   --link-hover:#d9963f;
   --oxide:#c2543a;
+  --slate:#1f6f9c;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{
@@ -84,6 +85,16 @@ header{background:var(--tile);border-bottom:1px solid var(--rule-dark)}
 .scale .mark{fill:var(--oxide)}
 .scale .mark-txt{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:500;fill:var(--ink)}
 .scale-note{padding:0 14px 16px;font-size:12px;color:var(--muted)}
+
+.chartwrap{padding:14px 8px 6px}
+svg.chart{display:block;width:100%;height:auto}
+svg.chart .axis{stroke:var(--rule);stroke-width:1}
+.gridline{stroke:var(--rule);stroke-width:1;stroke-dasharray:2 5}
+.axis-lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em;fill:var(--muted)}
+.hbar{fill:var(--slate)}
+.hbar-now{fill:var(--signal)}
+.avgline{stroke:var(--ink);stroke-width:1;stroke-dasharray:6 4;opacity:.5}
+.chart-empty{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;fill:var(--muted);text-anchor:middle}
 
 .state{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule)}
 .state div{background:var(--paper);padding:14px}
@@ -206,9 +217,28 @@ footer a{color:var(--signal);text-decoration:none}
     </dl>
   </section>
 
+  <section class="card">
+    <div class="card-head">
+      <span>Interference · last 24 h</span>
+      <span id="act-note">&nbsp;</span>
+    </div>
+    <div class="card-body chartwrap">
+      <svg class="chart" id="act" viewBox="0 0 900 240" role="img"
+           aria-label="Rejected events per hour over the last twenty-four hours, with the long-term average rate drawn as a dashed line. The bar for the current hour is still filling.">
+        <text id="act-empty" class="chart-empty" x="450" y="124">NO DATA YET</text>
+        <g id="act-body"></g>
+      </svg>
+    </div>
+    <p class="scale-note">Blue hours are complete; the amber bar is the hour still being
+    written, so it climbs as events land. The dashed line is the site's long-term rate —
+    the background chatter of motors and dimmers. A tower rising over that line in the
+    middle of a storm is mostly intra-cloud lightning the chip declined to call strikes.</p>
+  </section>
+
   <div class="note">
     <p>Readings arrive on the public MQTT broker at <code>wss://live.luisterpost.io</code>,
-    topics <code>luisterpost/lightning/status</code> and <code>luisterpost/lightning/strike</code>.
+    topics <code>luisterpost/lightning/status</code>, <code>luisterpost/lightning/strike</code>
+    and <code>luisterpost/lightning/activity</code>.
     The sensor is an AMS AS3935 on a tuned 500 kHz loop antenna, on the mast, in a box that
     holds no metal near the coil.</p>
 
@@ -267,8 +297,15 @@ footer a{color:var(--signal);text-decoration:none}
 
   var els = {};
   ["conn","conn-txt","r-strikes","r-age","r-dist","scale-note",
-   "mark","mark-txt","s-sensor","s-tuned","s-dist"]
+   "mark","mark-txt","s-sensor","s-tuned","s-dist",
+   "act-note","act-empty","act-body"]
     .forEach(function (id) { els[id] = document.getElementById(id); });
+
+  function svg(tag, attrs) {
+    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
 
   // Age is recomputed locally between status messages: the node publishes once a
   // minute, and a counter that only moved once a minute would look stuck.
@@ -386,6 +423,59 @@ footer a{color:var(--signal);text-decoration:none}
     els["scale-note"].textContent = "last strike";
   }
 
+  function renderActivity(d) {
+    if (!Array.isArray(d.hourly) || !d.hourly.length) return;
+    var n = d.hourly.length;
+    var W = 900, H = 240, L = 44, R = 14, T = 18, B = 40;
+    var pw = W - L - R, ph = H - T - B;
+    var avg = (typeof d.avg_per_hour === "number") ? d.avg_per_hour : null;
+    // The average is part of the scale on purpose: on a quiet day the bars are the
+    // baseline's size and the line sits among them, not pinned to the floor.
+    var max = Math.max(Math.max.apply(null, d.hourly), avg || 0, 1);
+    var g = els["act-body"]; g.textContent = "";
+    els["act-empty"].style.display = "none";
+
+    // Integer ticks only — counts are whole events, and a quiet chart with a peak
+    // of 1 must not grow fractional gridlines that read as broken.
+    var step = Math.max(1, Math.ceil(max / 2));
+    for (var v = 0; v <= max; v += step) {
+      var y = T + ph - v / max * ph;
+      g.appendChild(svg("line", { class: "gridline", x1: L, x2: L + pw, y1: y, y2: y }));
+      var yl = svg("text", { class: "axis-lbl", x: L - 8, y: y + 3, "text-anchor": "end" });
+      yl.textContent = v;
+      g.appendChild(yl);
+    }
+
+    var bw = pw / n;
+    var endH = (typeof d.end_hour === "number") ? d.end_hour : new Date().getHours();
+    for (var i = 0; i < n; i++) {
+      var hgt = d.hourly[i] / max * ph;
+      if (hgt > 0) {
+        g.appendChild(svg("rect", { class: i === n - 1 ? "hbar-now" : "hbar",
+          x: L + i * bw + 2, y: T + ph - hgt, width: Math.max(1, bw - 4), height: hgt }));
+      }
+      var hod = ((endH - (n - 1 - i)) % 24 + 24) % 24;
+      if (hod % 3 === 0) {
+        var xl = svg("text", { class: "axis-lbl", x: L + i * bw + bw / 2,
+                               y: T + ph + 17, "text-anchor": "middle" });
+        xl.textContent = String(hod).padStart(2, "0");
+        g.appendChild(xl);
+      }
+    }
+    g.appendChild(svg("line", { class: "axis", x1: L, x2: L + pw, y1: T + ph, y2: T + ph }));
+    var ul = svg("text", { class: "axis-lbl", x: L + pw, y: T + ph + 33, "text-anchor": "end" });
+    ul.textContent = "hour of day · station clock";
+    g.appendChild(ul);
+
+    if (avg != null) {
+      var ay = T + ph - avg / max * ph;
+      g.appendChild(svg("line", { class: "avgline", x1: L, x2: L + pw, y1: ay, y2: ay }));
+      var days = (typeof d.avg_window_h === "number") ? Math.round(d.avg_window_h / 24) : null;
+      els["act-note"].textContent =
+        "long-term " + avg + "/h" + (days ? " over " + days + " d" : "");
+    }
+  }
+
   setConn("is-down", "CONNECTING");
   var client = mqtt.connect(BROKER, {
     clientId: "luisterpost-lightning-" + Math.random().toString(16).slice(2, 10),
@@ -399,6 +489,7 @@ footer a{color:var(--signal);text-decoration:none}
     client.subscribe("luisterpost/lightning/status");
     client.subscribe("luisterpost/lightning/strike");
     client.subscribe("luisterpost/lightning/online");
+    client.subscribe("luisterpost/lightning/activity");
     client.subscribe("luisterpost/station/status");
   });
   client.on("reconnect", function () { setConn("is-down", "RECONNECTING"); });
@@ -419,6 +510,7 @@ footer a{color:var(--signal);text-decoration:none}
       return;
     }
     if (topic === "luisterpost/lightning/status") { onStatus(d); return; }
+    if (topic === "luisterpost/lightning/activity") { renderActivity(d); return; }
     if (topic === "luisterpost/lightning/strike") { onStrike(d, packet && packet.retain); return; }
   });
 
