@@ -355,11 +355,16 @@ footer a{color:var(--signal);text-decoration:none}
                                 : dist + (dist === 1 ? " event" : " events"));
   }
 
-  function onStrike(d) {
+  function onStrike(d, retained) {
     // A strike event repaints the readout immediately rather than waiting for the
     // next status: during a storm, a minute is a long time to look wrong.
     if (typeof d.strike_count === "number") els["r-strikes"].textContent = d.strike_count;
-    ageBase = 0; ageAt = Date.now(); tickAge();
+    // The strike topic is retained, so on connect this replays a strike that may
+    // be days old. Its `ts` says when it really happened; "just now" is only the
+    // truth for a live, unretained event.
+    var t = d.ts ? Date.parse(d.ts) : NaN;
+    if (!isNaN(t)) { ageBase = Math.max(0, (Date.now() - t) / 1000); ageAt = Date.now(); tickAge(); }
+    else if (!retained) { ageBase = 0; ageAt = Date.now(); tickAge(); }
     var km = (typeof d.distance_km === "number") ? d.distance_km : null;
     var overhead = d.overhead === true || km === 1;
     var oor = d.out_of_range === true || km === 63;
@@ -390,7 +395,7 @@ footer a{color:var(--signal);text-decoration:none}
   client.on("close",     function () { setConn("is-down", "OFFLINE"); });
   client.on("error",     function () { setConn("is-down", "ERROR"); });
 
-  client.on("message", function (topic, payload) {
+  client.on("message", function (topic, payload, packet) {
     var d;
     try { d = JSON.parse(payload.toString()); } catch (e) { return; }
 
@@ -404,7 +409,7 @@ footer a{color:var(--signal);text-decoration:none}
       return;
     }
     if (topic === "luisterpost/lightning/status") { onStatus(d); return; }
-    if (topic === "luisterpost/lightning/strike") { onStrike(d); return; }
+    if (topic === "luisterpost/lightning/strike") { onStrike(d, packet && packet.retain); return; }
   });
 
   setInterval(tickAge, 10000);
