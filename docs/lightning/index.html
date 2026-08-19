@@ -378,6 +378,11 @@ footer a{color:var(--signal);text-decoration:none}
                               : (km == null ? "—" : km) + "<small> km</small>";
       placeMark(overhead || oor ? null : km, overhead, oor);
       els["scale-note"].textContent = "last strike";
+    } else if (ageBase != null) {
+      // Status says "no strike since boot", but we already know of a strike from
+      // the retained strike topic — the node rebooted and forgot, the broker did
+      // not. A reboot must not un-happen a strike: keep dating it from its own
+      // timestamp and leave the distance readout alone.
     } else {
       ageBase = null;
       els["r-age"].className = "quiet";
@@ -405,7 +410,10 @@ footer a{color:var(--signal);text-decoration:none}
   function onStrike(d, retained) {
     // A strike event repaints the readout immediately rather than waiting for the
     // next status: during a storm, a minute is a long time to look wrong.
-    if (typeof d.strike_count === "number") els["r-strikes"].textContent = d.strike_count;
+    // The count, though, only from LIVE strikes: a retained replay carries the
+    // count as it stood back then, and the node may have rebooted since — status
+    // owns "since boot", and a stale 12 flapping down to a truthful 0 looks broken.
+    if (!retained && typeof d.strike_count === "number") els["r-strikes"].textContent = d.strike_count;
     // The strike topic is retained, so on connect this replays a strike that may
     // be days old. Its `ts` says when it really happened; "just now" is only the
     // truth for a live, unretained event.
