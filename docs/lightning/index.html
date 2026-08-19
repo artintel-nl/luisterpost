@@ -94,6 +94,9 @@ svg.chart .axis{stroke:var(--rule);stroke-width:1}
 .hbar{fill:var(--slate)}
 .hbar-now{fill:var(--signal)}
 .avgline{stroke:var(--ink);stroke-width:1;stroke-dasharray:6 4;opacity:.5}
+.storm-line{fill:none;stroke:var(--slate);stroke-width:1.5;opacity:.6}
+.storm-dot{fill:var(--slate)}
+.storm-dot-now{fill:var(--signal)}
 .chart-empty{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;fill:var(--muted);text-anchor:middle}
 
 .state{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule)}
@@ -208,6 +211,24 @@ footer a{color:var(--signal);text-decoration:none}
     <p class="scale-note">The detector does not measure distance so much as estimate it, from the shape and energy of the sferic. It reports one of fourteen bands — the ticks above — so a strike is somewhere in a band, not at a point. <b>Overhead</b> and <b>out of range</b> are flags rather than distances.</p>
   </section>
 
+  <section class="card" id="storm-card" style="display:none">
+    <div class="card-head">
+      <span>The storm · distance over time</span>
+      <span id="storm-note">&nbsp;</span>
+    </div>
+    <div class="card-body chartwrap">
+      <svg class="chart" id="storm-chart" viewBox="0 0 900 260" role="img"
+           aria-label="Distance of each validated strike over the course of the most recent storm. A falling trace means the storm front is approaching the station; a rising trace means it is leaving.">
+        <g id="storm-body"></g>
+      </svg>
+    </div>
+    <p class="scale-note">Each dot is one validated strike; the amber dot is the most
+    recent. A falling trace is the storm front closing on the station, a rising one is
+    it leaving. Strikes closer together than an hour count as the same storm, and the
+    card only appears once a storm has produced more than one placeable strike —
+    <b>out of range</b> strikes are counted in the corner but cannot be drawn.</p>
+  </section>
+
   <section class="card">
     <div class="card-head"><span>The detector</span><span>self-reported</span></div>
     <dl class="state">
@@ -237,8 +258,8 @@ footer a{color:var(--signal);text-decoration:none}
 
   <div class="note">
     <p>Readings arrive on the public MQTT broker at <code>wss://live.luisterpost.io</code>,
-    topics <code>luisterpost/lightning/status</code>, <code>luisterpost/lightning/strike</code>
-    and <code>luisterpost/lightning/activity</code>.
+    topics <code>luisterpost/lightning/status</code>, <code>luisterpost/lightning/strike</code>,
+    <code>luisterpost/lightning/activity</code> and <code>luisterpost/lightning/storm</code>.
     The sensor is an AMS AS3935 on a tuned 500 kHz loop antenna, on the mast, in a box that
     holds no metal near the coil.</p>
 
@@ -298,7 +319,7 @@ footer a{color:var(--signal);text-decoration:none}
   var els = {};
   ["conn","conn-txt","r-strikes","r-age","r-dist","scale-note",
    "mark","mark-txt","s-sensor","s-tuned","s-dist",
-   "act-note","act-empty","act-body"]
+   "act-note","act-empty","act-body","storm-card","storm-note","storm-body"]
     .forEach(function (id) { els[id] = document.getElementById(id); });
 
   function svg(tag, attrs) {
@@ -489,6 +510,62 @@ footer a{color:var(--signal);text-decoration:none}
     }
   }
 
+  function stationTime(t) {
+    return new Date(t * 1000).toLocaleTimeString("nl-NL",
+      { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function renderStorm(d) {
+    if (!Array.isArray(d.points)) return;
+    // Placeable strikes only: out-of-range carries no distance, it is counted in
+    // the card head instead of drawn.
+    var pts = d.points.filter(function (p) { return typeof p[1] === "number" && !p[3]; });
+    var oorN = d.points.length - pts.length;
+    if (pts.length < 2) { els["storm-card"].style.display = "none"; return; }
+    els["storm-card"].style.display = "";
+
+    var W = 900, H = 260, L = 44, R = 20, T = 18, B = 40;
+    var pw = W - L - R, ph = H - T - B;
+    var g = els["storm-body"]; g.textContent = "";
+
+    var t0 = pts[0][0], t1 = pts[pts.length - 1][0];
+    // A minimum span keeps two strikes seconds apart from stretching into a wall.
+    var span = Math.max(t1 - t0, 600);
+    var x = function (t) { return L + (t - t0) / span * pw; };
+    var YMAX = 40;
+    var y = function (km) { return T + ph - Math.min(km, YMAX) / YMAX * ph; };
+
+    for (var v = 0; v <= YMAX; v += 10) {
+      g.appendChild(svg("line", { class: "gridline", x1: L, x2: L + pw, y1: y(v), y2: y(v) }));
+      var yl = svg("text", { class: "axis-lbl", x: L - 8, y: y(v) + 3, "text-anchor": "end" });
+      yl.textContent = v === YMAX ? v + " KM" : v;
+      g.appendChild(yl);
+    }
+    var nTicks = 4;
+    for (var i = 0; i <= nTicks; i++) {
+      var tt = t0 + span * i / nTicks;
+      var xl = svg("text", { class: "axis-lbl", x: x(tt), y: T + ph + 17,
+                             "text-anchor": i === 0 ? "start" : i === nTicks ? "end" : "middle" });
+      xl.textContent = stationTime(tt);
+      g.appendChild(xl);
+    }
+    g.appendChild(svg("line", { class: "axis", x1: L, x2: L + pw, y1: T + ph, y2: T + ph }));
+    var ul = svg("text", { class: "axis-lbl", x: L + pw, y: T + ph + 33, "text-anchor": "end" });
+    ul.textContent = "station clock";
+    g.appendChild(ul);
+
+    g.appendChild(svg("polyline", { class: "storm-line",
+      points: pts.map(function (p) { return x(p[0]).toFixed(1) + "," + y(p[1]).toFixed(1); }).join(" ") }));
+    pts.forEach(function (p, idx) {
+      g.appendChild(svg("circle", { class: idx === pts.length - 1 ? "storm-dot-now" : "storm-dot",
+        cx: x(p[0]).toFixed(1), cy: y(p[1]).toFixed(1), r: 4 }));
+    });
+
+    els["storm-note"].textContent =
+      (d.active ? "in progress" : "ended " + stationTime(t1)) +
+      (oorN ? " · " + oorN + " out of range" : "");
+  }
+
   setConn("is-down", "CONNECTING");
   var client = mqtt.connect(BROKER, {
     clientId: "luisterpost-lightning-" + Math.random().toString(16).slice(2, 10),
@@ -503,6 +580,7 @@ footer a{color:var(--signal);text-decoration:none}
     client.subscribe("luisterpost/lightning/strike");
     client.subscribe("luisterpost/lightning/online");
     client.subscribe("luisterpost/lightning/activity");
+    client.subscribe("luisterpost/lightning/storm");
     client.subscribe("luisterpost/station/status");
   });
   client.on("reconnect", function () { setConn("is-down", "RECONNECTING"); });
@@ -524,6 +602,7 @@ footer a{color:var(--signal);text-decoration:none}
     }
     if (topic === "luisterpost/lightning/status") { onStatus(d); return; }
     if (topic === "luisterpost/lightning/activity") { renderActivity(d); return; }
+    if (topic === "luisterpost/lightning/storm") { renderStorm(d); return; }
     if (topic === "luisterpost/lightning/strike") { onStrike(d, packet && packet.retain); return; }
   });
 
