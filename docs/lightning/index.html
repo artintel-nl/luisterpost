@@ -145,7 +145,7 @@ footer a{color:var(--signal);text-decoration:none}
   </section>
 
   <dl class="readout">
-    <div><dt>Strikes since boot</dt><dd id="r-strikes">—</dd></div>
+    <div><dt>Strikes · 7 days</dt><dd id="r-strikes">—</dd></div>
     <div><dt>Last strike</dt><dd id="r-age">—</dd></div>
     <div><dt>Distance</dt><dd id="r-dist">—<small> km</small></dd></div>
   </dl>
@@ -309,7 +309,7 @@ footer a{color:var(--signal);text-decoration:none}
 
   // Age is recomputed locally between status messages: the node publishes once a
   // minute, and a counter that only moved once a minute would look stuck.
-  var ageBase = null, ageAt = 0, online = null, sensorOk = null;
+  var ageBase = null, ageAt = 0, online = null, sensorOk = null, strikes7d = null;
 
   function setConn(s, txt) {
     els.conn.className = "live mono " + s;
@@ -363,8 +363,9 @@ footer a{color:var(--signal);text-decoration:none}
     if (typeof d.sensor_ok === "boolean") { sensorOk = d.sensor_ok; }
     refreshConn();
 
-    var strikes = (typeof d.strike_count === "number") ? d.strike_count : null;
-    els["r-strikes"].textContent = strikes == null ? "—" : strikes;
+    // The strike tile is fed from the activity topic's 7-day window, not from
+    // status: the node's own counter is "since boot", and a reboot would show a
+    // quiet week where there wasn't one.
 
     if (typeof d.last_strike_age_s === "number" && d.last_strike_age_s >= 0) {
       ageBase = d.last_strike_age_s; ageAt = Date.now();
@@ -410,10 +411,10 @@ footer a{color:var(--signal);text-decoration:none}
   function onStrike(d, retained) {
     // A strike event repaints the readout immediately rather than waiting for the
     // next status: during a storm, a minute is a long time to look wrong.
-    // The count, though, only from LIVE strikes: a retained replay carries the
-    // count as it stood back then, and the node may have rebooted since — status
-    // owns "since boot", and a stale 12 flapping down to a truthful 0 looks broken.
-    if (!retained && typeof d.strike_count === "number") els["r-strikes"].textContent = d.strike_count;
+    // The count, though, only from LIVE strikes: bump the 7-day tile by one and
+    // let the next activity message (within 30 s) publish the real window. A
+    // retained replay carries a count as it stood back then — never shown.
+    if (!retained && strikes7d != null) { strikes7d += 1; els["r-strikes"].textContent = strikes7d; }
     // The strike topic is retained, so on connect this replays a strike that may
     // be days old. Its `ts` says when it really happened; "just now" is only the
     // truth for a live, unretained event.
@@ -432,6 +433,10 @@ footer a{color:var(--signal);text-decoration:none}
   }
 
   function renderActivity(d) {
+    if (typeof d.strikes_7d === "number") {
+      strikes7d = d.strikes_7d;
+      els["r-strikes"].textContent = strikes7d;
+    }
     if (!Array.isArray(d.hourly) || !d.hourly.length) return;
     var n = d.hourly.length;
     var W = 900, H = 240, L = 44, R = 14, T = 18, B = 40;
