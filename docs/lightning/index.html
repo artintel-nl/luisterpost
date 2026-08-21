@@ -97,6 +97,9 @@ svg.chart .axis{stroke:var(--rule);stroke-width:1}
 .storm-line{fill:none;stroke:var(--slate);stroke-width:1.5;opacity:.6}
 .storm-dot{fill:var(--slate)}
 .storm-dot-now{fill:var(--signal)}
+.storm-dot-oor{fill:var(--paper,#fff);stroke:var(--slate);stroke-width:1.5}
+.storm-dot-oor-now{fill:var(--paper,#fff);stroke:var(--signal);stroke-width:2}
+.storm-oor-band{fill:var(--slate);opacity:.06}
 .chart-empty{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;fill:var(--muted);text-anchor:middle}
 
 .state{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule)}
@@ -225,8 +228,10 @@ footer a{color:var(--signal);text-decoration:none}
     <p class="scale-note">Each dot is one validated strike; the amber dot is the most
     recent. A falling trace is the storm front closing on the station, a rising one is
     it leaving. Strikes closer together than an hour count as the same storm, and the
-    card only appears once a storm has produced more than one placeable strike —
-    <b>out of range</b> strikes are counted in the corner but cannot be drawn.</p>
+    card only appears once a storm has produced more than one strike. <b>Out of range</b>
+    strikes carry no distance, only "further than 40 km", so they sit as open circles on
+    the band above the axis — the trace still runs through them, which is how a storm
+    is seen leaving and coming back.</p>
   </section>
 
   <section class="card">
@@ -517,15 +522,16 @@ footer a{color:var(--signal);text-decoration:none}
 
   function renderStorm(d) {
     if (!Array.isArray(d.points)) return;
-    // Placeable strikes only: out-of-range carries no distance, it is counted in
-    // the card head instead of drawn.
-    var pts = d.points.filter(function (p) { return typeof p[1] === "number" && !p[3]; });
-    var oorN = d.points.length - pts.length;
+    // Every strike is drawn: out-of-range ones carry no distance, only "beyond
+    // 40 km", so they go on a band above the axis as open circles. Dropping them
+    // would make a storm that drifts past 40 km look as if it simply stopped.
+    var pts = d.points.filter(function (p) { return typeof p[1] === "number" || p[3]; });
+    var oorN = pts.filter(function (p) { return p[3]; }).length;
     if (pts.length < 2) { els["storm-card"].style.display = "none"; return; }
     els["storm-card"].style.display = "";
 
-    var W = 900, H = 260, L = 44, R = 20, T = 18, B = 40;
-    var pw = W - L - R, ph = H - T - B;
+    var W = 900, H = 260, L = 44, R = 20, T = 18, B = 40, OOR = 30;
+    var pw = W - L - R, ph = H - T - B - OOR;   // OOR: the band above 40 km
     var g = els["storm-body"]; g.textContent = "";
 
     var t0 = pts[0][0], t1 = pts[pts.length - 1][0];
@@ -533,7 +539,14 @@ footer a{color:var(--signal);text-decoration:none}
     var span = Math.max(t1 - t0, 600);
     var x = function (t) { return L + (t - t0) / span * pw; };
     var YMAX = 40;
-    var y = function (km) { return T + ph - Math.min(km, YMAX) / YMAX * ph; };
+    var yTop = T + OOR;
+    var y = function (km) { return yTop + ph - Math.min(km, YMAX) / YMAX * ph; };
+    var yOf = function (p) { return p[3] ? T + OOR / 2 : y(p[1]); };
+
+    g.appendChild(svg("rect", { class: "storm-oor-band", x: L, y: T, width: pw, height: OOR }));
+    var ol = svg("text", { class: "axis-lbl", x: L - 8, y: T + OOR / 2 + 3, "text-anchor": "end" });
+    ol.textContent = ">40";
+    g.appendChild(ol);
 
     for (var v = 0; v <= YMAX; v += 10) {
       g.appendChild(svg("line", { class: "gridline", x1: L, x2: L + pw, y1: y(v), y2: y(v) }));
@@ -544,21 +557,24 @@ footer a{color:var(--signal);text-decoration:none}
     var nTicks = 4;
     for (var i = 0; i <= nTicks; i++) {
       var tt = t0 + span * i / nTicks;
-      var xl = svg("text", { class: "axis-lbl", x: x(tt), y: T + ph + 17,
+      var xl = svg("text", { class: "axis-lbl", x: x(tt), y: yTop + ph + 17,
                              "text-anchor": i === 0 ? "start" : i === nTicks ? "end" : "middle" });
       xl.textContent = stationTime(tt);
       g.appendChild(xl);
     }
-    g.appendChild(svg("line", { class: "axis", x1: L, x2: L + pw, y1: T + ph, y2: T + ph }));
-    var ul = svg("text", { class: "axis-lbl", x: L + pw, y: T + ph + 33, "text-anchor": "end" });
+    g.appendChild(svg("line", { class: "axis", x1: L, x2: L + pw, y1: yTop + ph, y2: yTop + ph }));
+    var ul = svg("text", { class: "axis-lbl", x: L + pw, y: yTop + ph + 33, "text-anchor": "end" });
     ul.textContent = "station clock";
     g.appendChild(ul);
 
     g.appendChild(svg("polyline", { class: "storm-line",
-      points: pts.map(function (p) { return x(p[0]).toFixed(1) + "," + y(p[1]).toFixed(1); }).join(" ") }));
+      points: pts.map(function (p) { return x(p[0]).toFixed(1) + "," + yOf(p).toFixed(1); }).join(" ") }));
     pts.forEach(function (p, idx) {
-      g.appendChild(svg("circle", { class: idx === pts.length - 1 ? "storm-dot-now" : "storm-dot",
-        cx: x(p[0]).toFixed(1), cy: y(p[1]).toFixed(1), r: 4 }));
+      var last = idx === pts.length - 1;
+      var cls = p[3] ? (last ? "storm-dot-oor-now" : "storm-dot-oor")
+                     : (last ? "storm-dot-now" : "storm-dot");
+      g.appendChild(svg("circle", { class: cls,
+        cx: x(p[0]).toFixed(1), cy: yOf(p).toFixed(1), r: 4 }));
     });
 
     els["storm-note"].textContent =
