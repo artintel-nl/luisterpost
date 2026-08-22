@@ -520,6 +520,12 @@ footer a{color:var(--signal);text-decoration:none}
       { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
   }
 
+  function stationDateTime(t) {
+    return new Date(t * 1000).toLocaleString("en-GB",
+      { timeZone: "Europe/Amsterdam", weekday: "short", day: "numeric", month: "short",
+        hour: "2-digit", minute: "2-digit" }).replace(",", "");
+  }
+
   function renderStorm(d) {
     if (!Array.isArray(d.points)) return;
     // Every strike is drawn: out-of-range ones carry no distance, only "beyond
@@ -578,7 +584,7 @@ footer a{color:var(--signal);text-decoration:none}
     });
 
     els["storm-note"].textContent =
-      (d.active ? "in progress" : "ended " + stationTime(t1)) +
+      (d.active ? "since " + stationDateTime(t0) : "ended " + stationDateTime(t1)) +
       (oorN ? " · " + oorN + " out of range" : "");
   }
 
